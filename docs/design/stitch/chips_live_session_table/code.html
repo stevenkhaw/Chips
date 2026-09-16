@@ -1,0 +1,233 @@
+<!DOCTYPE html><html class="h-full bg-black" lang="en"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport">
+<title>CHIPS - Active Night</title>
+<!-- Tailwind CSS v3 -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              orange: '#FF6B00',
+              'orange-hover': '#e65f00',
+              green: '#22C55E',
+              'green-hover': '#16a34a',
+              card: '#161618',
+              surface: '#0F0F10',
+              modal: '#1A1A1C',
+              pill: '#242426'
+            }
+          },
+          fontFamily: {
+            sans: ['-apple-system', 'BlinkMacSystemFont', '"SF Pro Text"', '"SF Pro Display"', 'Segoe UI', 'Roboto', 'Helvetica', 'Arial', 'sans-serif']
+          }
+        }
+      }
+    }
+  </script>
+<style data-purpose="custom-scrollbars">
+    /* Hide scrollbars for slick native app look */
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+  </style>
+<style data-purpose="bottom-sheet-animation">
+    /* Subtle spring-like entrance animation for bottom sheet */
+    @keyframes slideUp {
+      from { transform: translateY(100%); }
+      to { transform: translateY(0); }
+    }
+    .animate-slide-up {
+      animation: slideUp 0.28s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+  </style>
+</head>
+<body class="h-full bg-black text-white font-sans antialiased select-none flex justify-center items-center">
+<!-- Mobile Device Shell Container -->
+<div class="relative w-full max-w-[420px] h-full sm:h-[880px] bg-black sm:rounded-[48px] sm:border-[8px] sm:border-[#262628] overflow-hidden flex flex-col shadow-2xl">
+<!-- BEGIN: iOSStatusBar -->
+<header class="w-full pt-3 px-7 flex justify-between items-center text-white text-xs font-semibold tracking-tight shrink-0 z-20">
+<!-- Time display -->
+<span>9:41</span>
+<!-- Native iOS status icons (Cellular, WiFi, Battery) -->
+<div aria-hidden="true" class="flex items-center space-x-1.5">
+<svg class="w-4 h-3.5 fill-current" viewBox="0 0 17 11">
+<rect height="3" rx="0.6" width="2.5" x="0" y="8"></rect>
+<rect height="5" rx="0.6" width="2.5" x="4" y="6"></rect>
+<rect height="7.5" rx="0.6" width="2.5" x="8" y="3.5"></rect>
+<rect height="10.5" rx="0.6" width="2.5" x="12" y="0.5"></rect>
+</svg>
+<svg class="w-4 h-3 fill-current" viewBox="0 0 16 12">
+<path d="M8 2.8C10.6 2.8 13 3.8 14.8 5.4L16 4.1C13.8 2.2 11 1 8 1 5 1 2.2 2.2 0 4.1L1.2 5.4C3 3.8 5.4 2.8 8 2.8ZM8 6.4C9.6 6.4 11.2 7.1 12.3 8.2L13.5 6.9C12.1 5.6 10.1 4.7 8 4.7 5.9 4.7 3.9 5.6 2.5 6.9L3.7 8.2C4.8 7.1 6.4 6.4 8 6.4ZM8 10C8.8 10 9.5 10.7 9.5 11.5 9.5 12.3 8.8 13 8 13 7.2 13 6.5 12.3 6.5 11.5 6.5 10.7 7.2 10 8 10Z"></path>
+</svg>
+<div class="w-6 h-3 border border-white/80 rounded-[3px] p-0.5 flex items-center">
+<div class="h-full w-full bg-white rounded-[1.5px]"></div>
+</div>
+</div>
+</header>
+<!-- END: iOSStatusBar -->
+<!-- BEGIN: ScreenHeader -->
+<section class="px-5 pt-3 pb-2 flex items-center justify-between shrink-0" data-purpose="session-header">
+<div class="flex items-center space-x-3">
+<!-- Back Button -->
+<button aria-label="Go back" class="text-neutral-400 hover:text-white p-1 -ml-1 transition-colors" type="button">
+<svg class="w-6 h-6 stroke-current stroke-2" fill="none" viewBox="0 0 24 24">
+<path d="M15 19l-7-7 7-7" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</button>
+<div>
+<span class="block text-[10px] uppercase font-bold tracking-widest text-brand-orange">Active Night</span>
+<h1 class="text-xl font-bold text-white tracking-tight -mt-0.5">Dave's place</h1>
+</div>
+</div>
+<!-- Pot Badge -->
+<div class="bg-neutral-900 border border-neutral-800 rounded-xl px-3 py-1.5 flex flex-col items-end">
+<span class="text-[9px] uppercase tracking-wider text-neutral-400 font-medium leading-none">Pot Pool</span>
+<span class="text-sm font-extrabold text-brand-green leading-tight mt-0.5">$230</span>
+</div>
+</section>
+<!-- END: ScreenHeader -->
+<!-- BEGIN: InstructionalBanner -->
+<div class="px-5 py-1.5 shrink-0" data-purpose="instructional-banner">
+<p class="text-center text-xs text-neutral-400 font-medium py-1">
+        Tap <span class="text-brand-orange font-bold">+</span> to log default rebuy ($20)
+      </p>
+</div>
+<!-- END: InstructionalBanner -->
+<!-- BEGIN: PlayersList -->
+<main class="flex-1 px-5 overflow-y-auto no-scrollbar space-y-2.5 pt-1 pb-4" data-purpose="player-roster">
+<!-- Player Row: Dave (Host) -->
+<div class="bg-brand-card rounded-2xl p-3.5 flex items-center justify-between border border-neutral-800/80 shadow-sm">
+<div class="flex flex-col">
+<span class="text-base font-semibold text-white">Dave (Host)</span>
+<span class="text-xs text-neutral-400 mt-0.5 font-medium">In: <strong class="text-neutral-200 font-semibold">$40</strong></span>
+</div>
+<button aria-label="Rebuy for Dave" class="w-12 h-11 bg-brand-orange hover:bg-brand-orange-hover active:scale-95 text-white font-bold text-2xl rounded-xl flex items-center justify-center shadow transition-all duration-150" type="button">
+          +
+        </button>
+</div>
+<!-- Player Row: Ann -->
+<div class="bg-brand-card rounded-2xl p-3.5 flex items-center justify-between border border-neutral-800/80 shadow-sm">
+<div class="flex flex-col">
+<span class="text-base font-semibold text-white">Ann</span>
+<span class="text-xs text-neutral-400 mt-0.5 font-medium">In: <strong class="text-neutral-200 font-semibold">$20</strong></span>
+</div>
+<button aria-label="Rebuy for Ann" class="w-12 h-11 bg-brand-orange hover:bg-brand-orange-hover active:scale-95 text-white font-bold text-2xl rounded-xl flex items-center justify-center shadow transition-all duration-150" type="button">
+          +
+        </button>
+</div>
+<!-- Player Row: Bob (Highlighted active target) -->
+<div class="bg-brand-card rounded-2xl p-3.5 flex items-center justify-between border border-brand-orange/40 ring-1 ring-brand-orange/20 shadow-sm">
+<div class="flex flex-col">
+<span class="text-base font-semibold text-white">Bob</span>
+<span class="text-xs text-neutral-400 mt-0.5 font-medium">In: <strong class="text-neutral-200 font-semibold">$40</strong></span>
+</div>
+<button aria-label="Rebuy for Bob" class="w-12 h-11 bg-brand-orange hover:bg-brand-orange-hover active:scale-95 text-white font-bold text-2xl rounded-xl flex items-center justify-center shadow transition-all duration-150" type="button">
+          +
+        </button>
+</div>
+<!-- Player Row: Charlie -->
+<div class="bg-brand-card rounded-2xl p-3.5 flex items-center justify-between border border-neutral-800/80 shadow-sm">
+<div class="flex flex-col">
+<span class="text-base font-semibold text-white">Charlie</span>
+<span class="text-xs text-neutral-400 mt-0.5 font-medium">In: <strong class="text-neutral-200 font-semibold">$40</strong></span>
+</div>
+<button aria-label="Rebuy for Charlie" class="w-12 h-11 bg-brand-orange hover:bg-brand-orange-hover active:scale-95 text-white font-bold text-2xl rounded-xl flex items-center justify-center shadow transition-all duration-150" type="button">
+          +
+        </button>
+</div>
+<!-- Player Row: Elena -->
+<div class="bg-brand-card rounded-2xl p-3.5 flex items-center justify-between border border-neutral-800/80 shadow-sm">
+<div class="flex flex-col">
+<span class="text-base font-semibold text-white">Elena</span>
+<span class="text-xs text-neutral-400 mt-0.5 font-medium">In: <strong class="text-neutral-200 font-semibold">$20</strong></span>
+</div>
+<button aria-label="Rebuy for Elena" class="w-12 h-11 bg-brand-orange hover:bg-brand-orange-hover active:scale-95 text-white font-bold text-2xl rounded-xl flex items-center justify-center shadow transition-all duration-150" type="button">
+          +
+        </button>
+</div>
+<!-- Player Row: Frank -->
+<div class="bg-brand-card rounded-2xl p-3.5 flex items-center justify-between border border-neutral-800/80 shadow-sm">
+<div class="flex flex-col">
+<span class="text-base font-semibold text-white">Frank</span>
+<span class="text-xs text-neutral-400 mt-0.5 font-medium">In: <strong class="text-neutral-200 font-semibold">$40</strong></span>
+</div>
+<button aria-label="Rebuy for Frank" class="w-12 h-11 bg-brand-orange hover:bg-brand-orange-hover active:scale-95 text-white font-bold text-2xl rounded-xl flex items-center justify-center shadow transition-all duration-150" type="button">
+          +
+        </button>
+</div>
+</main>
+<!-- END: PlayersList -->
+<!-- BEGIN: RebuyModalOverlay -->
+<!-- Represents the 5th frame overlay from https://lh3.googleusercontent.com/aida-public/AB6AXuCNe0Ab9K32L-jtHVz-Zkso3cHFAEd1bP4xXHWrEoDHK3X7GKHeNhA5b2y2bOuj01f5jTwjc25fDpKZ6iG4B99zt3KvGqtvk_PtxRx8xkyGzgTAyPA_LOO-u2yj9DBdAPM3Z7pyCTFbDLLS_YsnVo-uOKOMoHfy6wLJBv9w8FiTnTNCzO7MamerYfEpDktUDSzkaume0Chu5MjT705eyJXkVbUjU_5K8-P_FsedqFA7TOK05y7DMYZ-Bdbkketa9lwfHnk -->
+<div class="absolute inset-0 bg-black/70 backdrop-blur-sm z-30 flex flex-col justify-end transition-opacity duration-200" data-purpose="buyin-drawer-modal" id="rebuy-modal">
+<!-- Interactive Bottom Sheet Card -->
+<div class="bg-brand-modal w-full rounded-t-[32px] p-6 pb-8 border-t border-neutral-800 shadow-2xl animate-slide-up flex flex-col items-center">
+<!-- Grabber handle -->
+<div class="w-10 h-1 bg-neutral-600 rounded-full mb-4"></div>
+<!-- Sheet Header Info -->
+<h2 class="text-lg font-bold text-white text-center">Add Buy-In for Bob</h2>
+<p class="text-xs text-neutral-400 text-center mt-0.5 mb-5 font-medium">Select an amount to append to Bob's tally</p>
+<!-- Big Centered Hero Green Amount Display -->
+<div class="my-2 text-center" data-purpose="hero-amount">
+<span class="text-5xl font-extrabold text-brand-green tracking-tight font-sans">$20</span>
+</div>
+<!-- Quick Amount Pills -->
+<div class="grid grid-cols-4 gap-2.5 w-full my-6" data-purpose="increment-pills">
+<button class="py-2.5 rounded-xl bg-brand-pill border border-neutral-700/60 text-xs font-semibold text-neutral-200 hover:bg-neutral-800 active:scale-95 transition-all text-center" type="button">
+            +$10
+          </button>
+<button class="py-2.5 rounded-xl bg-brand-green/20 border border-brand-green/60 text-xs font-bold text-brand-green active:scale-95 transition-all text-center" type="button">
+            +$20
+          </button>
+<button class="py-2.5 rounded-xl bg-brand-pill border border-neutral-700/60 text-xs font-semibold text-neutral-200 hover:bg-neutral-800 active:scale-95 transition-all text-center" type="button">
+            +$50
+          </button>
+<button class="py-2.5 rounded-xl bg-brand-pill border border-neutral-700/60 text-xs font-semibold text-neutral-200 hover:bg-neutral-800 active:scale-95 transition-all text-center" type="button">
+            +$100
+          </button>
+</div>
+<!-- Confirm Action Button -->
+<button class="w-full py-4 bg-brand-green hover:bg-brand-green-hover active:scale-[0.98] text-white font-bold text-base rounded-2xl shadow-lg transition duration-150 text-center" id="add-buyin-btn" type="button">
+          Add Buy-In
+        </button>
+</div>
+</div>
+<!-- END: RebuyModalOverlay -->
+<!-- BEGIN: StickyFooterBar -->
+<!-- Cash out button (Frame 4 appearance visible beneath modal or accessible after closing) -->
+<footer class="p-5 pt-2 pb-6 bg-black/90 backdrop-blur shrink-0 border-t border-neutral-900 z-10" data-purpose="cash-out-footer">
+<button class="w-full py-4 bg-brand-orange hover:bg-brand-orange-hover active:scale-[0.99] text-white font-bold text-base rounded-2xl shadow-lg flex items-center justify-center space-x-1.5 transition-all" type="button">
+<span>Go to Cash-Out</span>
+<span class="text-xl leading-none">→</span>
+</button>
+<!-- Home Indicator Bar -->
+<div class="w-32 h-1 bg-neutral-600 rounded-full mx-auto mt-4"></div>
+</footer>
+<!-- END: StickyFooterBar -->
+</div>
+<script data-purpose="drawer-interactivity">
+    // Lightweight toggle script to demonstrate sheet dismissal & opening
+    const modal = document.getElementById('rebuy-modal');
+    const confirmBtn = document.getElementById('add-buyin-btn');
+
+    if (confirmBtn && modal) {
+      confirmBtn.addEventListener('click', () => {
+        modal.classList.add('hidden');
+      });
+    }
+
+    // Reopen modal if any orange plus button is clicked
+    document.querySelectorAll('[aria-label^="Rebuy for"]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        modal.classList.remove('hidden');
+      });
+    });
+  </script>
+</body></html>

@@ -1,0 +1,239 @@
+<!DOCTYPE html><html class="h-full" lang="en"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0, user-scalable=no" name="viewport">
+<title>Chips - Select Players</title>
+<!-- Tailwind CSS v3 with forms and container queries -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brandDark: '#0D0E10',
+            cardBg: '#18191D',
+            inputBg: '#141518',
+            brandOrange: '#FF7A00',
+            brandGreen: '#10B981',
+            accentGreen: '#22C55E',
+            textMuted: '#8E8E93',
+            borderSubtle: 'rgba(255, 255, 255, 0.07)',
+          },
+          fontFamily: {
+            sans: ['-apple-system', 'BlinkMacSystemFont', 'SF Pro Text', 'SF Pro Display', 'Helvetica Neue', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+<style data-purpose="custom-scroll-and-layout">
+    /* Hide scrollbar for iOS clean appearance */
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+  </style>
+</head>
+<body class="bg-brandDark text-white font-sans antialiased h-full flex justify-center items-center select-none overflow-hidden">
+<!-- BEGIN: MobileFrameContainer -->
+<!-- Container replicating the iPhone screen dimensions (390 x 844 px) -->
+<div class="w-full max-w-[390px] h-[844px] bg-brandDark flex flex-col relative overflow-hidden shadow-2xl border border-white/5 sm:rounded-[48px]" data-purpose="mobile-frame">
+<!-- BEGIN: iOSStatusBar -->
+<div class="w-full h-11 pt-3 px-7 flex justify-between items-center text-xs font-semibold tracking-tight text-white shrink-0 z-30" data-purpose="status-bar">
+<!-- Time -->
+<span>9:41</span>
+<!-- Right Icons (Signal, Wifi, Battery) -->
+<div class="flex items-center space-x-1.5">
+<!-- Cellular Signal Icon -->
+<svg class="w-3.5 h-3.5 fill-current" viewBox="0 0 16 16">
+<rect height="4" rx="0.5" width="2" x="1" y="10"></rect>
+<rect height="6.5" rx="0.5" width="2" x="5" y="7.5"></rect>
+<rect height="9" rx="0.5" width="2" x="9" y="5"></rect>
+<rect height="12" rx="0.5" width="2" x="13" y="2"></rect>
+</svg>
+<!-- Wi-Fi Icon -->
+<svg class="w-3.5 h-3.5 fill-current" viewBox="0 0 16 16">
+<path clip-rule="evenodd" d="M8 3.5a8.96 8.96 0 0 0-5.83 2.19l.71.71A7.96 7.96 0 0 1 8 4.5c1.88 0 3.6.65 4.96 1.74l.71-.71A8.96 8.96 0 0 0 8 3.5zm0 3c-1.58 0-3.03.58-4.15 1.54l.71.71A5.02 5.02 0 0 1 8 7.5c1.23 0 2.37.45 3.25 1.2l.71-.71A6.03 6.03 0 0 0 8 6.5zm0 3a2.49 2.49 0 0 0-1.77.73l1.77 1.77 1.77-1.77A2.49 2.49 0 0 0 8 9.5z" fill-rule="evenodd"></path>
+</svg>
+<!-- Battery Icon -->
+<div class="w-5 h-2.5 border border-white rounded-[4px] p-0.5 flex items-center">
+<div class="w-full h-full bg-white rounded-[1.5px]"></div>
+</div>
+</div>
+</div>
+<!-- END: iOSStatusBar -->
+<!-- BEGIN: NavigationHeader -->
+<header class="px-5 pt-1 pb-3 flex items-center justify-between shrink-0" data-purpose="screen-header">
+<!-- Back Button Chevron -->
+<button aria-label="Go back" class="w-9 h-9 flex items-center justify-start text-white/80 active:opacity-50 transition" type="button">
+<svg class="w-6 h-6 stroke-[2.5]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+<path d="M15 19l-7-7 7-7" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</button>
+<!-- Center Step and Screen Title -->
+<div class="text-center">
+<span class="block text-[10px] font-bold tracking-widest text-textMuted uppercase mb-0.5">STEP 2 OF 2</span>
+<h1 class="text-base font-bold text-white tracking-tight">Select Players</h1>
+</div>
+<!-- Close Button 'X' -->
+<button aria-label="Close" class="w-9 h-9 flex items-center justify-end text-white/80 active:opacity-50 transition" type="button">
+<svg class="w-5 h-5 stroke-[2.2]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+<path d="M6 18L18 6M6 6l12 12" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</button>
+</header>
+<!-- END: NavigationHeader -->
+<!-- BEGIN: ScrollableContent -->
+<main class="flex-1 overflow-y-auto no-scrollbar px-4 pb-28">
+<!-- BEGIN: AddPlayerInputSection -->
+<section class="mt-2 mb-5" data-purpose="add-player-form">
+<div class="flex items-center gap-2">
+<!-- Text Input Field -->
+<div class="relative flex-1">
+<input class="w-full h-12 bg-cardBg text-sm text-white placeholder-textMuted border border-borderSubtle rounded-xl px-4 focus:outline-none focus:border-brandOrange/50 focus:ring-0 transition" placeholder="Add new player name..." type="text">
+</div>
+<!-- Plus Add Button -->
+<button aria-label="Add player" class="h-12 w-12 bg-cardBg border border-borderSubtle text-white rounded-xl flex items-center justify-center active:bg-white/10 transition shrink-0" type="button">
+<svg class="w-5 h-5 stroke-[2.5]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+<path d="M12 4v16m8-8H4" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</button>
+</div>
+</section>
+<!-- END: AddPlayerInputSection -->
+<!-- BEGIN: PlayerListSummaryHeader -->
+<div class="flex justify-between items-center mb-3 px-1" data-purpose="list-summary">
+<span class="text-xs font-semibold text-textMuted">6 of 10 Players Selected</span>
+<button class="text-xs font-bold text-brandOrange tracking-wide uppercase hover:opacity-80 active:opacity-60 transition" type="button">
+          CLEAR ALL
+        </button>
+</div>
+<!-- END: PlayerListSummaryHeader -->
+<!-- BEGIN: PlayersList -->
+<section class="space-y-2" data-purpose="player-roster">
+<!-- Player Row 1: Ann (Selected) -->
+<div class="h-14 bg-cardBg border border-borderSubtle rounded-2xl px-3.5 flex items-center justify-between">
+<div class="flex items-center space-x-3">
+<div class="w-9 h-9 rounded-full bg-[#23252A] flex items-center justify-center text-sm font-semibold text-white/90">
+              A
+            </div>
+<span class="text-sm font-semibold text-white tracking-wide">Ann</span>
+</div>
+<div class="w-6 h-6 rounded-md bg-accentGreen flex items-center justify-center">
+<svg class="w-4 h-4 text-black stroke-[3]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+<path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</div>
+</div>
+<!-- Player Row 2: Bob (Selected) -->
+<div class="h-14 bg-cardBg border border-borderSubtle rounded-2xl px-3.5 flex items-center justify-between">
+<div class="flex items-center space-x-3">
+<div class="w-9 h-9 rounded-full bg-[#23252A] flex items-center justify-center text-sm font-semibold text-white/90">
+              B
+            </div>
+<span class="text-sm font-semibold text-white tracking-wide">Bob</span>
+</div>
+<div class="w-6 h-6 rounded-md bg-accentGreen flex items-center justify-center">
+<svg class="w-4 h-4 text-black stroke-[3]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+<path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</div>
+</div>
+<!-- Player Row 3: Charlie (Selected) -->
+<div class="h-14 bg-cardBg border border-borderSubtle rounded-2xl px-3.5 flex items-center justify-between">
+<div class="flex items-center space-x-3">
+<div class="w-9 h-9 rounded-full bg-[#23252A] flex items-center justify-center text-sm font-semibold text-white/90">
+              C
+            </div>
+<span class="text-sm font-semibold text-white tracking-wide">Charlie</span>
+</div>
+<div class="w-6 h-6 rounded-md bg-accentGreen flex items-center justify-center">
+<svg class="w-4 h-4 text-black stroke-[3]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+<path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</div>
+</div>
+<!-- Player Row 4: Dave (Host) (Selected) -->
+<div class="h-14 bg-cardBg border border-borderSubtle rounded-2xl px-3.5 flex items-center justify-between">
+<div class="flex items-center space-x-3">
+<div class="w-9 h-9 rounded-full bg-[#23252A] flex items-center justify-center text-sm font-semibold text-white/90">
+              D
+            </div>
+<span class="text-sm font-semibold text-white tracking-wide">Dave <span class="text-textMuted font-normal">(Host)</span></span>
+</div>
+<div class="w-6 h-6 rounded-md bg-accentGreen flex items-center justify-center">
+<svg class="w-4 h-4 text-black stroke-[3]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+<path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</div>
+</div>
+<!-- Player Row 5: Elena (Selected) -->
+<div class="h-14 bg-cardBg border border-borderSubtle rounded-2xl px-3.5 flex items-center justify-between">
+<div class="flex items-center space-x-3">
+<div class="w-9 h-9 rounded-full bg-[#23252A] flex items-center justify-center text-sm font-semibold text-white/90">
+              E
+            </div>
+<span class="text-sm font-semibold text-white tracking-wide">Elena</span>
+</div>
+<div class="w-6 h-6 rounded-md bg-accentGreen flex items-center justify-center">
+<svg class="w-4 h-4 text-black stroke-[3]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+<path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</div>
+</div>
+<!-- Player Row 6: Frank (Selected) -->
+<div class="h-14 bg-cardBg border border-borderSubtle rounded-2xl px-3.5 flex items-center justify-between">
+<div class="flex items-center space-x-3">
+<div class="w-9 h-9 rounded-full bg-[#23252A] flex items-center justify-center text-sm font-semibold text-white/90">
+              F
+            </div>
+<span class="text-sm font-semibold text-white tracking-wide">Frank</span>
+</div>
+<div class="w-6 h-6 rounded-md bg-accentGreen flex items-center justify-center">
+<svg class="w-4 h-4 text-black stroke-[3]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+<path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</div>
+</div>
+<!-- Player Row 7: George (Unselected) -->
+<div class="h-14 bg-cardBg border border-borderSubtle rounded-2xl px-3.5 flex items-center justify-between opacity-60">
+<div class="flex items-center space-x-3">
+<div class="w-9 h-9 rounded-full bg-[#23252A] flex items-center justify-center text-sm font-semibold text-white/60">
+              G
+            </div>
+<span class="text-sm font-semibold text-white tracking-wide">George</span>
+</div>
+<!-- Unchecked Checkbox Box -->
+<div class="w-6 h-6 rounded-md border border-white/20 bg-transparent flex items-center justify-center"></div>
+</div>
+<!-- Player Row 8: Hannah (Unselected) -->
+<div class="h-14 bg-cardBg border border-borderSubtle rounded-2xl px-3.5 flex items-center justify-between opacity-60">
+<div class="flex items-center space-x-3">
+<div class="w-9 h-9 rounded-full bg-[#23252A] flex items-center justify-center text-sm font-semibold text-white/60">
+              H
+            </div>
+<span class="text-sm font-semibold text-white tracking-wide">Hannah</span>
+</div>
+<!-- Unchecked Checkbox Box -->
+<div class="w-6 h-6 rounded-md border border-white/20 bg-transparent flex items-center justify-center"></div>
+</div>
+</section>
+<!-- END: PlayersList -->
+</main>
+<!-- END: ScrollableContent -->
+<!-- BEGIN: BottomFixedAction -->
+<!-- Fixed CTA container above the iOS home indicator -->
+<div class="absolute bottom-0 inset-x-0 bg-gradient-to-t from-brandDark via-brandDark/95 to-transparent pt-6 pb-8 px-4 flex flex-col items-center pointer-events-auto" data-purpose="bottom-cta-container">
+<!-- Main CTA Button -->
+<button class="w-full h-14 bg-brandOrange hover:bg-orange-500 active:scale-[0.98] transition-all duration-150 rounded-2xl text-black font-extrabold text-base tracking-wide flex items-center justify-center shadow-lg shadow-brandOrange/20" type="button">
+        Confirm &amp; Start Game →
+      </button>
+<!-- iOS Home Bar Indicator -->
+<div class="w-32 h-1 bg-white/30 rounded-full mt-5" data-purpose="home-indicator"></div>
+</div>
+<!-- END: BottomFixedAction -->
+</div>
+<!-- END: MobileFrameContainer -->
+</body></html>

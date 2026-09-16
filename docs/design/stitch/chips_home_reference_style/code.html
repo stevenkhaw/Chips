@@ -1,0 +1,193 @@
+<!DOCTYPE html><html class="dark" lang="en"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport">
+<title>CHIPS - Home</title>
+<!-- Tailwind CSS v3 with Plugins -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            chips: {
+              bg: '#0c0d10',
+              card: '#16181d',
+              cardBorder: '#232730',
+              primaryOrange: '#ff6200',
+              primaryGreen: '#00d668',
+              greenHover: '#00bf5c',
+              textMuted: '#8b929e',
+              textLight: '#f3f4f6'
+            }
+          },
+          fontFamily: {
+            sans: ['-apple-system', 'BlinkMacSystemFont', '"SF Pro Text"', '"SF Pro Display"', 'Segoe UI', 'Roboto', 'Helvetica', 'Arial', 'sans-serif']
+          }
+        }
+      }
+    }
+  </script>
+<!-- Typography & Global Mobile Styles -->
+<style data-purpose="typography">
+    body {
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      background-color: #0c0d10;
+      color: #f3f4f6;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+  </style>
+<!-- Layout & Custom Utilities -->
+<style data-purpose="layout">
+    .status-notch-spacer {
+      height: 44px;
+    }
+    .home-indicator {
+      width: 134px;
+      height: 5px;
+      background-color: #ffffff;
+      border-radius: 9999px;
+      opacity: 0.35;
+    }
+  </style>
+</head>
+<body class="bg-chips-bg min-h-screen flex justify-center items-start text-white">
+<!-- BEGIN: MobileDeviceFrame -->
+<div class="w-full max-w-[430px] min-h-screen flex flex-col justify-between bg-chips-bg relative overflow-hidden shadow-2xl border-x border-neutral-900/60 pb-8">
+<!-- BEGIN: iOSStatusBar -->
+<header class="status-notch-spacer px-7 pt-3 flex justify-between items-center text-xs font-semibold text-white tracking-tight z-20" data-purpose="ios-status-bar">
+<!-- Device Time -->
+<span class="text-sm font-medium tracking-normal">9:41</span>
+<!-- System Icons -->
+<div class="flex items-center space-x-2 text-white fill-current">
+<!-- Cellular Signal -->
+<svg class="w-4 h-3.5" fill="currentColor" viewBox="0 0 17 12">
+<rect height="4" rx="0.5" width="2.5" x="0" y="8"></rect>
+<rect height="6.5" rx="0.5" width="2.5" x="4.5" y="5.5"></rect>
+<rect height="9" rx="0.5" width="2.5" x="9" y="3"></rect>
+<rect height="11.5" rx="0.5" width="2.5" x="13.5" y="0.5"></rect>
+</svg>
+<!-- WiFi -->
+<svg class="w-4 h-3.5" fill="currentColor" viewBox="0 0 16 12">
+<path clip-rule="evenodd" d="M8 2.4C10.6 2.4 13 3.4 14.8 5.1L16 3.8C13.8 1.8 11 0.7 8 0.7C5 0.7 2.2 1.8 0 3.8L1.2 5.1C3 3.4 5.4 2.4 8 2.4ZM8 6C9.7 6 11.2 6.7 12.4 7.8L13.6 6.5C12.1 5.2 10.1 4.3 8 4.3C5.9 4.3 3.9 5.2 2.4 6.5L3.6 7.8C4.8 6.7 6.3 6 8 6ZM8 9.6C8.9 9.6 9.8 10 10.4 10.6L8 13.2L5.6 10.6C6.2 10 7.1 9.6 8 9.6Z" fill-rule="evenodd"></path>
+</svg>
+<!-- Battery -->
+<div class="w-6 h-3 rounded-md border border-white/80 p-0.5 flex items-center relative">
+<div class="h-full w-full bg-white rounded-[1.5px]"></div>
+<div class="absolute -right-1 w-0.5 h-1.5 bg-white/80 rounded-r-sm top-1/2 -translate-y-1/2"></div>
+</div>
+</div>
+</header>
+<!-- END: iOSStatusBar -->
+<!-- Main Content Container -->
+<main class="flex-1 px-5 pt-3 pb-6 flex flex-col justify-start">
+<!-- BEGIN: AppHeader -->
+<section class="flex items-center justify-between mb-5" data-purpose="app-header">
+<!-- Logo & Title -->
+<div class="flex items-center space-x-2.5">
+<!-- Orange Poker Chip Icon -->
+<div class="w-8 h-8 rounded-full bg-chips-primaryOrange flex items-center justify-center shadow-lg shadow-chips-primaryOrange/20">
+<svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" viewBox="0 0 24 24">
+<circle cx="12" cy="12" r="9"></circle>
+<path d="M12 3v3"></path>
+<path d="M12 18v3"></path>
+<path d="M3 12h3"></path>
+<path d="M18 12h3"></path>
+<circle cx="12" cy="12" r="4"></circle>
+</svg>
+</div>
+<!-- App Brand Name -->
+<h1 class="text-xl font-black tracking-wider text-white">CHIPS</h1>
+</div>
+<!-- User Profile Avatar with Orange Accent -->
+<button aria-label="User Profile" class="relative group" type="button">
+<div class="w-9 h-9 rounded-full bg-chips-card border border-chips-cardBorder flex items-center justify-center text-chips-primaryOrange">
+<svg class="w-5 h-5 fill-current" viewBox="0 0 24 24">
+<path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"></path>
+</svg>
+</div>
+<span class="absolute top-0 right-0 w-2.5 h-2.5 bg-chips-primaryOrange rounded-full ring-2 ring-chips-bg"></span>
+</button>
+</section>
+<!-- END: AppHeader -->
+<!-- BEGIN: MetricsOverview -->
+<section class="grid grid-cols-2 gap-3 mb-4" data-purpose="metrics-row">
+<!-- All-Time Nights Card -->
+<div class="bg-chips-card border border-chips-cardBorder/60 rounded-2xl p-4 flex flex-col justify-center">
+<span class="text-[10px] font-bold tracking-wider text-chips-textMuted uppercase mb-1">ALL-TIME NIGHTS</span>
+<span class="text-2xl font-black text-white tracking-tight">42</span>
+</div>
+<!-- Total Volume Card -->
+<div class="bg-chips-card border border-chips-cardBorder/60 rounded-2xl p-4 flex flex-col justify-center">
+<span class="text-[10px] font-bold tracking-wider text-chips-textMuted uppercase mb-1">TOTAL VOLUME</span>
+<span class="text-2xl font-black text-white tracking-tight">$4,820</span>
+</div>
+</section>
+<!-- END: MetricsOverview -->
+<!-- BEGIN: CalloutBanner -->
+<section class="bg-chips-card border border-chips-cardBorder/70 rounded-2xl p-4 mb-6" data-purpose="callout-card">
+<h2 class="text-base font-bold text-white mb-1">Ready to deal?</h2>
+<p class="text-xs text-chips-textMuted font-normal leading-relaxed mb-4">
+          Start a new night, track buy-ins, calculate splits instantly.
+        </p>
+<!-- CTA Start New Night Button -->
+<button class="w-full bg-chips-primaryGreen hover:bg-chips-greenHover active:scale-[0.99] transition-all text-black font-bold text-sm py-3.5 rounded-xl flex items-center justify-center space-x-1.5 shadow-sm" type="button">
+<span>Start New Night</span>
+</button>
+</section>
+<!-- END: CalloutBanner -->
+<!-- BEGIN: PastNightsSection -->
+<section class="flex-1 flex flex-col" data-purpose="past-nights-list">
+<!-- Section Header -->
+<div class="mb-3 px-0.5">
+<h3 class="text-[11px] font-bold tracking-wider text-chips-textMuted uppercase">PAST NIGHTS</h3>
+</div>
+<!-- Nights List Container -->
+<div class="bg-chips-card border border-chips-cardBorder/70 rounded-2xl divide-y divide-chips-cardBorder/40 overflow-hidden">
+<!-- Card 1: Dave's place -->
+<article class="p-3.5 flex items-center justify-between active:bg-neutral-800/40 transition-colors cursor-pointer">
+<div class="flex flex-col">
+<h4 class="text-sm font-semibold text-white tracking-tight mb-0.5">Dave's place</h4>
+<span class="text-[11px] text-chips-textMuted font-normal">Oct 12, 2024 · 8 players</span>
+</div>
+<div class="text-right">
+<span class="text-sm font-bold text-chips-primaryGreen tracking-tight block">$230</span>
+<span class="text-[9px] font-medium text-chips-textMuted/70 block -mt-0.5">Pot Pool</span>
+</div>
+</article>
+<!-- Card 2: Friday Night Lights -->
+<article class="p-3.5 flex items-center justify-between active:bg-neutral-800/40 transition-colors cursor-pointer">
+<div class="flex flex-col">
+<h4 class="text-sm font-semibold text-white tracking-tight mb-0.5">Friday Night Lights</h4>
+<span class="text-[11px] text-chips-textMuted font-normal">Oct 05, 2024 · 6 players</span>
+</div>
+<div class="text-right">
+<span class="text-sm font-bold text-chips-primaryGreen tracking-tight block">$180</span>
+<span class="text-[9px] font-medium text-chips-textMuted/70 block -mt-0.5">Pot Pool</span>
+</div>
+</article>
+<!-- Card 3: Dacha Stakes -->
+<article class="p-3.5 flex items-center justify-between active:bg-neutral-800/40 transition-colors cursor-pointer">
+<div class="flex flex-col">
+<h4 class="text-sm font-semibold text-white tracking-tight mb-0.5">Dacha Stakes</h4>
+<span class="text-[11px] text-chips-textMuted font-normal">Sep 28, 2024 · 9 players</span>
+</div>
+<div class="text-right">
+<span class="text-sm font-bold text-chips-primaryGreen tracking-tight block">$450</span>
+<span class="text-[9px] font-medium text-chips-textMuted/70 block -mt-0.5">Pot Pool</span>
+</div>
+</article>
+</div>
+</section>
+<!-- END: PastNightsSection -->
+</main>
+<!-- BEGIN: iOSHomeIndicator -->
+<footer class="w-full flex justify-center pb-2 pt-4" data-purpose="home-indicator-area">
+<div class="home-indicator"></div>
+</footer>
+<!-- END: iOSHomeIndicator -->
+</div>
+<!-- END: MobileDeviceFrame -->
+</body></html>

@@ -1,0 +1,315 @@
+<!DOCTYPE html><html lang="en"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport">
+<title>Chips - Settlements &amp; Share Card</title>
+<!-- Tailwind CSS v3 -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            obsidian: '#0D0E10',
+            cardBg: '#18191D',
+            cardHover: '#202227',
+            emeraldAccent: '#10B981',
+            emeraldBright: '#00C853',
+            orangeAccent: '#FF7A00',
+            pillBg: '#26282E',
+            borderSubtle: '#23252B'
+          },
+          fontFamily: {
+            sans: ['-apple-system', 'BlinkMacSystemFont', '"SF Pro Display"', '"SF Pro Text"', 'Inter', 'sans-serif']
+          }
+        }
+      }
+    }
+  </script>
+<style data-purpose="custom-scroll-and-safe-area">
+    /* iOS friendly scrolling and safe-area adjustments */
+    body {
+      -webkit-tap-highlight-color: transparent;
+      background-color: #0D0E10;
+      color: #FFFFFF;
+    }
+    .hide-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .hide-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+  </style>
+</head>
+<body class="bg-obsidian text-white antialiased min-h-screen flex justify-center selection:bg-emerald-500/30">
+<!-- BEGIN: MobileDeviceFrame -->
+<main class="w-full max-w-[414px] min-h-screen bg-obsidian flex flex-col justify-between relative shadow-2xl pb-6 select-none" data-purpose="mobile-container">
+<!-- BEGIN: TopStatusBar -->
+<header class="pt-3 px-6 pb-2" data-purpose="status-and-nav-header">
+<!-- iOS Status Bar Mock -->
+<div class="flex justify-between items-center text-xs font-semibold text-neutral-400 mb-3 tracking-tight">
+<span>9:41</span>
+<div class="flex items-center space-x-2 text-neutral-300">
+<!-- Signal Icon -->
+<svg class="w-4 h-3.5 fill-current" viewBox="0 0 17 12">
+<rect height="4" rx="0.7" width="2.5" x="0.5" y="8"></rect>
+<rect height="6.5" rx="0.7" width="2.5" x="4.5" y="5.5"></rect>
+<rect height="9" rx="0.7" width="2.5" x="8.5" y="3"></rect>
+<rect height="11.5" rx="0.7" width="2.5" x="12.5" y="0.5"></rect>
+</svg>
+<!-- Wifi Icon -->
+<svg class="w-3.5 h-3.5 fill-current" viewBox="0 0 16 12">
+<path d="M8 12a1.8 1.8 0 1 1 0-3.6A1.8 1.8 0 0 1 8 12zm-4.7-4.4a6.6 6.6 0 0 1 9.4 0 .9.9 0 0 0 1.3-1.3 8.4 8.4 0 0 0-12 0 .9.9 0 1 0 1.3 1.3zm-2.8-2.8a10.6 10.6 0 0 1 15 0 .9.9 0 0 0 1.3-1.3 12.4 12.4 0 0 0-17.6 0 .9.9 0 0 0 1.3 1.3z"></path>
+</svg>
+<!-- Battery Icon -->
+<div class="w-6 h-3 rounded-[3.5px] border border-neutral-400 p-0.5 flex items-center">
+<div class="bg-white h-full w-[85%] rounded-[1.5px]"></div>
+</div>
+</div>
+</div>
+<!-- Navigation & Title Bar -->
+<nav class="flex items-center justify-between pt-1">
+<!-- Back Button -->
+<button aria-label="Go back" class="w-9 h-9 rounded-full bg-cardBg border border-borderSubtle flex items-center justify-center text-neutral-300 hover:text-white transition-colors" type="button">
+<svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+<path d="M15 19l-7-7 7-7" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</button>
+<!-- Center Screen Title -->
+<div class="text-center">
+<p class="text-[11px] uppercase tracking-wider text-neutral-400 font-semibold leading-tight">Dave's place</p>
+<h1 class="text-lg font-bold text-white tracking-tight">Settlements</h1>
+</div>
+<!-- Right Quick Action / Status Chip -->
+<div class="w-9 h-9 rounded-full bg-emeraldAccent/15 border border-emeraldAccent/30 flex items-center justify-center text-emeraldAccent">
+<svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+<path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</div>
+</nav>
+</header>
+<!-- END: TopStatusBar -->
+<!-- BEGIN: ScrollableContent -->
+<div class="flex-1 px-5 pt-2 pb-6 overflow-y-auto hide-scrollbar space-y-5" data-purpose="main-scroll-content">
+<!-- BEGIN: SummaryBanner -->
+<section class="bg-cardBg border border-borderSubtle rounded-2xl p-4 flex items-center justify-between shadow-lg" data-purpose="total-summary-card">
+<div class="flex items-center space-x-3">
+<div class="w-8 h-8 rounded-xl bg-orangeAccent/15 flex items-center justify-center text-orangeAccent">
+<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.3" viewBox="0 0 24 24">
+<path d="M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 11-18 0 9 9 0 0118 0z" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</div>
+<div>
+<span class="text-xs uppercase font-medium text-neutral-400 tracking-wider">Total Cash Handled</span>
+<p class="text-xs text-neutral-500 font-normal">Balanced pot pool</p>
+</div>
+</div>
+<div class="text-right">
+<span class="text-xl font-extrabold text-emeraldAccent tracking-tight">$230.00</span>
+</div>
+</section>
+<!-- END: SummaryBanner -->
+<!-- BEGIN: TransfersSection -->
+<section data-purpose="settlement-transfers-list">
+<!-- Section Caption -->
+<div class="flex items-center justify-between mb-3 px-1">
+<h2 class="text-[11px] font-bold tracking-wider uppercase text-neutral-400">Fewest Transfers Required</h2>
+<span class="text-[11px] font-semibold text-emeraldAccent bg-emeraldAccent/10 px-2 py-0.5 rounded-full">5 Transactions</span>
+</div>
+<!-- Transfer Cards Stack -->
+<div class="space-y-2.5">
+<!-- Card 1: Dave pays Bob $40 -->
+<article class="bg-cardBg border border-borderSubtle hover:border-neutral-700 rounded-xl p-3 flex items-center justify-between transition-colors">
+<div class="flex items-center space-x-2 text-sm">
+<div class="w-7 h-7 rounded-full bg-neutral-800 border border-neutral-700 flex items-center justify-center font-bold text-xs text-neutral-200">
+                D
+              </div>
+<span class="font-semibold text-neutral-200">Dave</span>
+<div class="flex items-center space-x-1 px-2 py-0.5 rounded bg-neutral-900/60 text-xs text-neutral-400 font-medium">
+<span>pays</span>
+<svg class="w-3.5 h-3.5 text-neutral-500" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+<path d="M14 5l7 7m0 0l-7 7m7-7H3" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</div>
+<div class="w-7 h-7 rounded-full bg-neutral-800 border border-neutral-700 flex items-center justify-center font-bold text-xs text-neutral-200">
+                B
+              </div>
+<span class="font-semibold text-neutral-200">Bob</span>
+</div>
+<div class="text-base font-extrabold text-emeraldAccent tabular-nums">
+              $40
+            </div>
+</article>
+<!-- Card 2: Frank pays Ann $55 -->
+<article class="bg-cardBg border border-borderSubtle hover:border-neutral-700 rounded-xl p-3 flex items-center justify-between transition-colors">
+<div class="flex items-center space-x-2 text-sm">
+<div class="w-7 h-7 rounded-full bg-neutral-800 border border-neutral-700 flex items-center justify-center font-bold text-xs text-neutral-200">
+                F
+              </div>
+<span class="font-semibold text-neutral-200">Frank</span>
+<div class="flex items-center space-x-1 px-2 py-0.5 rounded bg-neutral-900/60 text-xs text-neutral-400 font-medium">
+<span>pays</span>
+<svg class="w-3.5 h-3.5 text-neutral-500" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+<path d="M14 5l7 7m0 0l-7 7m7-7H3" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</div>
+<div class="w-7 h-7 rounded-full bg-neutral-800 border border-neutral-700 flex items-center justify-center font-bold text-xs text-neutral-200">
+                A
+              </div>
+<span class="font-semibold text-neutral-200">Ann</span>
+</div>
+<div class="text-base font-extrabold text-emeraldAccent tabular-nums">
+              $55
+            </div>
+</article>
+<!-- Card 3: Charlie pays Bob $25 -->
+<article class="bg-cardBg border border-borderSubtle hover:border-neutral-700 rounded-xl p-3 flex items-center justify-between transition-colors">
+<div class="flex items-center space-x-2 text-sm">
+<div class="w-7 h-7 rounded-full bg-neutral-800 border border-neutral-700 flex items-center justify-center font-bold text-xs text-neutral-200">
+                C
+              </div>
+<span class="font-semibold text-neutral-200">Charlie</span>
+<div class="flex items-center space-x-1 px-2 py-0.5 rounded bg-neutral-900/60 text-xs text-neutral-400 font-medium">
+<span>pays</span>
+<svg class="w-3.5 h-3.5 text-neutral-500" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+<path d="M14 5l7 7m0 0l-7 7m7-7H3" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</div>
+<div class="w-7 h-7 rounded-full bg-neutral-800 border border-neutral-700 flex items-center justify-center font-bold text-xs text-neutral-200">
+                B
+              </div>
+<span class="font-semibold text-neutral-200">Bob</span>
+</div>
+<div class="text-base font-extrabold text-emeraldAccent tabular-nums">
+              $25
+            </div>
+</article>
+<!-- Card 4: Charlie pays Elena $5 -->
+<article class="bg-cardBg border border-borderSubtle hover:border-neutral-700 rounded-xl p-3 flex items-center justify-between transition-colors">
+<div class="flex items-center space-x-2 text-sm">
+<div class="w-7 h-7 rounded-full bg-neutral-800 border border-neutral-700 flex items-center justify-center font-bold text-xs text-neutral-200">
+                C
+              </div>
+<span class="font-semibold text-neutral-200">Charlie</span>
+<div class="flex items-center space-x-1 px-2 py-0.5 rounded bg-neutral-900/60 text-xs text-neutral-400 font-medium">
+<span>pays</span>
+<svg class="w-3.5 h-3.5 text-neutral-500" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+<path d="M14 5l7 7m0 0l-7 7m7-7H3" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</div>
+<div class="w-7 h-7 rounded-full bg-neutral-800 border border-neutral-700 flex items-center justify-center font-bold text-xs text-neutral-200">
+                E
+              </div>
+<span class="font-semibold text-neutral-200">Elena</span>
+</div>
+<div class="text-base font-extrabold text-emeraldAccent tabular-nums">
+              $5
+            </div>
+</article>
+<!-- Card 5: Frank pays Elena $5 -->
+<article class="bg-cardBg border border-borderSubtle hover:border-neutral-700 rounded-xl p-3 flex items-center justify-between transition-colors">
+<div class="flex items-center space-x-2 text-sm">
+<div class="w-7 h-7 rounded-full bg-neutral-800 border border-neutral-700 flex items-center justify-center font-bold text-xs text-neutral-200">
+                F
+              </div>
+<span class="font-semibold text-neutral-200">Frank</span>
+<div class="flex items-center space-x-1 px-2 py-0.5 rounded bg-neutral-900/60 text-xs text-neutral-400 font-medium">
+<span>pays</span>
+<svg class="w-3.5 h-3.5 text-neutral-500" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+<path d="M14 5l7 7m0 0l-7 7m7-7H3" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</div>
+<div class="w-7 h-7 rounded-full bg-neutral-800 border border-neutral-700 flex items-center justify-center font-bold text-xs text-neutral-200">
+                E
+              </div>
+<span class="font-semibold text-neutral-200">Elena</span>
+</div>
+<div class="text-base font-extrabold text-emeraldAccent tabular-nums">
+              $5
+            </div>
+</article>
+</div>
+</section>
+<!-- END: TransfersSection -->
+<!-- BEGIN: WhatsAppShareCardPreview -->
+<section class="mt-4" data-purpose="whatsapp-preview-card">
+<div class="flex items-center justify-between mb-2 px-1">
+<span class="text-[10px] uppercase font-bold text-neutral-400 tracking-wider">Message &amp; WhatsApp Card</span>
+<span class="text-[11px] text-neutral-500">Live Preview</span>
+</div>
+<div class="bg-[#121417] border border-neutral-800 rounded-2xl p-4 shadow-xl relative overflow-hidden">
+<!-- Card Header / Title with Verified Check -->
+<div class="flex items-center justify-between border-b border-neutral-800/80 pb-3 mb-3">
+<div>
+<span class="text-[9px] font-bold text-emeraldAccent tracking-widest uppercase">Chips Bookkeeping</span>
+<h3 class="text-sm font-bold text-white">Dave's place</h3>
+</div>
+<div class="w-7 h-7 rounded-full bg-emeraldAccent/20 flex items-center justify-center text-emeraldAccent">
+<svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+<path clip-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" fill-rule="evenodd"></path>
+</svg>
+</div>
+</div>
+<!-- Settlements Quick Lines -->
+<div class="space-y-1 text-xs text-neutral-300 font-mono leading-relaxed">
+<div class="flex justify-between items-center py-0.5">
+<span>• Dave pays Bob</span>
+<span class="text-emeraldAccent font-semibold font-sans">$40</span>
+</div>
+<div class="flex justify-between items-center py-0.5">
+<span>• Frank pays Ann</span>
+<span class="text-emeraldAccent font-semibold font-sans">$55</span>
+</div>
+<div class="flex justify-between items-center py-0.5">
+<span>• Charlie pays Bob</span>
+<span class="text-emeraldAccent font-semibold font-sans">$25</span>
+</div>
+<div class="flex justify-between items-center py-0.5">
+<span>• Charlie pays Elena</span>
+<span class="text-emeraldAccent font-semibold font-sans">$5</span>
+</div>
+<div class="flex justify-between items-center py-0.5">
+<span>• Frank pays Elena</span>
+<span class="text-emeraldAccent font-semibold font-sans">$5</span>
+</div>
+</div>
+<!-- Meta Pill / Date / Balance Footer -->
+<div class="mt-3.5 pt-2.5 border-t border-neutral-800/80 flex items-center justify-between text-[11px] text-neutral-400">
+<span>Oct 12, 2024</span>
+<span class="inline-flex items-center space-x-1.5 px-2 py-0.5 rounded-full bg-cardBg border border-neutral-700 text-neutral-300 font-medium">
+<span class="w-1.5 h-1.5 rounded-full bg-emeraldAccent inline-block"></span>
+<span>Pool balanced: <strong class="text-white">$230</strong></span>
+</span>
+</div>
+</div>
+</section>
+<!-- END: WhatsAppShareCardPreview -->
+</div>
+<!-- END: ScrollableContent -->
+<!-- BEGIN: BottomActionButtons -->
+<footer class="px-5 pt-3 border-t border-borderSubtle bg-obsidian/95 backdrop-blur space-y-2.5" data-purpose="footer-action-buttons">
+<!-- Primary Action: Share to WhatsApp -->
+<button class="w-full h-12 bg-emeraldAccent hover:bg-emeraldBright active:scale-[0.99] text-obsidian font-bold text-sm rounded-xl flex items-center justify-center space-x-2 shadow-lg shadow-emerald-500/20 transition duration-150" type="button">
+<!-- WhatsApp Vector Icon -->
+<svg class="w-5 h-5 fill-current" viewBox="0 0 24 24">
+<path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z"></path>
+</svg>
+<span>Share to WhatsApp</span>
+</button>
+<!-- Secondary Action: Copy to Clipboard -->
+<button class="w-full h-11 bg-cardBg hover:bg-cardHover border border-borderSubtle active:scale-[0.99] text-neutral-200 font-semibold text-xs rounded-xl flex items-center justify-center space-x-2 transition duration-150" type="button">
+<!-- Copy Icon -->
+<svg class="w-4 h-4 text-neutral-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+<path d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+<span>Copy to Clipboard</span>
+</button>
+<!-- iOS Home Indicator -->
+<div class="pt-2 flex justify-center pb-1">
+<div class="w-32 h-1 bg-neutral-700/60 rounded-full"></div>
+</div>
+</footer>
+<!-- END: BottomActionButtons -->
+</main>
+<!-- END: MobileDeviceFrame -->
+</body></html>

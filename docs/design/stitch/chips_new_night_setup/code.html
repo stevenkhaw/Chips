@@ -1,0 +1,167 @@
+<!DOCTYPE html><html class="dark" lang="en"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport">
+<title>New Night - CHIPS</title>
+<!-- Tailwind CSS v3 -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            appDark: '#0D0D0D',
+            cardDark: '#171717',
+            inputDark: '#1E1E1E',
+            accentGreen: '#10B981',
+            textMuted: '#71717A',
+            borderDark: '#262626'
+          },
+          fontFamily: {
+            sans: ['-apple-system', 'BlinkMacSystemFont', '"SF Pro Text"', '"SF Pro Display"', 'system-ui', 'sans-serif']
+          }
+        }
+      }
+    }
+  </script>
+<style data-purpose="custom-layout">
+    /* Mobile app viewport confinement */
+    body {
+      background-color: #050505;
+      color: #FFFFFF;
+      font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+    .device-container {
+      max-width: 420px;
+      min-height: 100vh;
+      margin: 0 auto;
+      background-color: #0D0D0D;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+    input::placeholder {
+      color: #52525B;
+    }
+  </style>
+</head>
+<body class="flex justify-center items-center min-h-screen">
+<!-- BEGIN: MobileContainer -->
+<div class="device-container w-full shadow-2xl border-x border-neutral-900 flex flex-col justify-between p-6 pt-3 pb-8" data-purpose="mobile-screen-wrapper">
+<!-- BEGIN: iOSStatusBar -->
+<div class="w-full flex justify-between items-center text-xs font-semibold px-2 py-1 mb-3 text-neutral-400" data-purpose="status-bar">
+<span>9:41</span>
+<div class="flex items-center space-x-2">
+<!-- Signal strength indicator -->
+<svg class="w-4 h-3.5 fill-current" viewBox="0 0 16 12">
+<rect height="3" rx="0.5" width="2.5" x="0" y="9"></rect>
+<rect height="6" rx="0.5" width="2.5" x="4" y="6"></rect>
+<rect height="9" rx="0.5" width="2.5" x="8" y="3"></rect>
+<rect height="12" rx="0.5" width="2.5" x="12" y="0"></rect>
+</svg>
+<!-- Wifi icon -->
+<svg class="w-4 h-3.5 fill-current" viewBox="0 0 16 12">
+<path d="M8 9.5a1.5 1.5 0 100 3 1.5 1.5 0 000-3zM2.8 5.8a7.5 7.5 0 0110.4 0 .8.8 0 001.1-1.1 9 9 0 00-12.6 0 .8.8 0 001.1 1.1zM.5 3.3a11 11 0 0115 0 .8.8 0 001.1-1.1 12.5 12.5 0 00-17.2 0 .8.8 0 001.1 1.1z"></path>
+</svg>
+<!-- Battery icon -->
+<div class="w-6 h-3 border border-neutral-400 rounded-sm p-0.5 flex items-center">
+<div class="bg-neutral-200 h-full w-4/5 rounded-2xs"></div>
+</div>
+</div>
+</div>
+<!-- END: iOSStatusBar -->
+<!-- Top Section (Header + Form) -->
+<div class="flex-1 flex flex-col">
+<!-- BEGIN: NavigationHeader -->
+<header class="flex items-center justify-between mb-8" data-purpose="screen-header">
+<!-- Back Button -->
+<button aria-label="Go back" class="w-10 h-10 -ml-2 rounded-full flex items-center justify-center text-neutral-400 hover:text-white transition-colors active:bg-neutral-800">
+<svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+<path d="M15 19l-7-7 7-7" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</button>
+<!-- Step Indicator and Screen Title -->
+<div class="text-center">
+<p class="text-[11px] uppercase tracking-widest font-semibold text-neutral-400 mb-0.5" data-purpose="step-indicator">Step 1 of 2</p>
+<h1 class="text-xl font-bold tracking-tight text-white">New Night</h1>
+</div>
+<!-- Close / Cancel Button -->
+<button aria-label="Close setup" class="w-10 h-10 -mr-2 rounded-full flex items-center justify-center text-neutral-400 hover:text-white transition-colors active:bg-neutral-800">
+<svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+<path d="M6 18L18 6M6 6l12 12" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</button>
+</header>
+<!-- END: NavigationHeader -->
+<!-- BEGIN: SetupForm -->
+<main class="space-y-6" data-purpose="setup-form">
+<!-- Host/Title Input Field -->
+<div class="space-y-2">
+<label class="block text-[11px] font-bold tracking-wider text-neutral-400 uppercase" for="night-title">
+            Night Title / Host
+          </label>
+<div class="relative">
+<input class="w-full bg-[#18181B] text-white border border-neutral-800 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 rounded-xl px-4 py-3.5 text-base font-medium transition outline-none" id="night-title" placeholder="Dave's place" type="text" value="Dave's place">
+</div>
+</div>
+<!-- Game Date Field -->
+<div class="space-y-2">
+<label class="block text-[11px] font-bold tracking-wider text-neutral-400 uppercase">
+            Game Date
+          </label>
+<button aria-label="Select Game Date" class="w-full bg-[#18181B] text-white border border-neutral-800 rounded-xl px-4 py-3.5 flex items-center justify-between text-left text-base font-medium active:bg-[#202024] transition outline-none" type="button">
+<span>Oct 12, 2024</span>
+<!-- Calendar Icon -->
+<svg class="w-5 h-5 text-neutral-400" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+<rect height="18" rx="3" stroke-linecap="round" width="18" x="3" y="4"></rect>
+<line stroke-linecap="round" x1="16" x2="16" y1="2" y2="6"></line>
+<line stroke-linecap="round" x1="8" x2="8" y1="2" y2="6"></line>
+<line stroke-linecap="round" x1="3" x2="21" y1="10" y2="10"></line>
+</svg>
+</button>
+</div>
+<!-- Default Buy-in Presets -->
+<div class="space-y-2.5">
+<label class="block text-[11px] font-bold tracking-wider text-neutral-400 uppercase">
+            Default Buy-In
+          </label>
+<div aria-label="Default buy-in amounts" class="grid grid-cols-4 gap-2.5" role="radiogroup">
+<!-- $10 Option -->
+<button aria-checked="false" class="bg-[#18181B] text-neutral-200 border border-neutral-800 rounded-xl py-3 text-sm font-semibold hover:bg-neutral-800 transition active:scale-95 text-center" role="radio" type="button">
+              $10
+            </button>
+<!-- $20 Option (Active State) -->
+<button aria-checked="true" class="bg-[#10B981] text-neutral-950 font-bold border border-[#10B981] rounded-xl py-3 text-sm shadow-sm transition active:scale-95 text-center" role="radio" type="button">
+              $20
+            </button>
+<!-- $50 Option -->
+<button aria-checked="false" class="bg-[#18181B] text-neutral-200 border border-neutral-800 rounded-xl py-3 text-sm font-semibold hover:bg-neutral-800 transition active:scale-95 text-center" role="radio" type="button">
+              $50
+            </button>
+<!-- Custom Option -->
+<button aria-checked="false" class="bg-[#18181B] text-neutral-200 border border-neutral-800 rounded-xl py-3 text-sm font-semibold hover:bg-neutral-800 transition active:scale-95 text-center" role="radio" type="button">
+              Custom
+            </button>
+</div>
+</div>
+</main>
+<!-- END: SetupForm -->
+</div>
+<!-- BEGIN: ActionFooter -->
+<footer class="pt-6" data-purpose="primary-action-container">
+<!-- Select Players Button -->
+<button class="w-full bg-[#10B981] hover:bg-emerald-400 active:bg-emerald-600 text-neutral-950 text-base font-bold py-4 px-6 rounded-2xl flex items-center justify-center space-x-2 shadow-lg shadow-emerald-950/40 transition active:scale-[0.99]" type="button">
+<span>Select Players</span>
+<span class="text-lg leading-none font-bold">→</span>
+</button>
+<!-- Home Bar Indicator for iOS -->
+<div class="mt-5 flex justify-center items-center">
+<div class="w-32 h-1 bg-neutral-600 rounded-full"></div>
+</div>
+</footer>
+<!-- END: ActionFooter -->
+</div>
+<!-- END: MobileContainer -->
+</body></html>

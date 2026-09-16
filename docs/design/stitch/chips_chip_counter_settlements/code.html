@@ -1,0 +1,527 @@
+<!DOCTYPE html><html class="h-full bg-black" lang="en"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0, viewport-fit=cover" name="viewport">
+<title>CHIPS - Cash-Out &amp; Settlements</title>
+<!-- Tailwind CSS CDN with forms and container queries -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              black: '#0d0e11',
+              dark: '#16181d',
+              card: '#1c1f26',
+              input: '#232731',
+              border: '#2a2f3d',
+              green: '#22c55e',
+              greenDark: '#15803d',
+              orange: '#f97316',
+              orangeDark: '#ea580c'
+            }
+          },
+          fontFamily: {
+            sans: ['-apple-system', 'BlinkMacSystemFont', 'SF Pro Text', 'SF Pro Display', 'Segoe UI', 'Roboto', 'sans-serif']
+          }
+        }
+      }
+    }
+  </script>
+<!-- iOS-like styling overrides & scrollbar hiding -->
+<style data-purpose="layout">
+    body {
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+    .hide-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .hide-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+  </style>
+</head>
+<body class="h-full bg-[#0d0e11] text-white antialiased flex flex-col items-center justify-start min-h-screen">
+<!-- Mobile Viewport Shell (iPhone Form Factor) -->
+<div class="w-full max-w-md min-h-screen bg-[#0e1015] flex flex-col border-x border-[#1e222b] relative shadow-2xl pb-8">
+<!-- BEGIN: TopBar -->
+<header class="pt-12 px-5 pb-3 sticky top-0 bg-[#0e1015]/95 backdrop-blur-md z-30 border-b border-[#1b1f28]">
+<!-- Status bar placeholder details -->
+<div class="flex items-center justify-between text-xs text-gray-400 mb-2 font-medium tracking-wide">
+<span>9:41</span>
+<div class="flex items-center space-x-1.5">
+<svg class="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M12 3c-4.97 0-9 4.03-9 9s4.03 9 9 9 9-4.03 9-9-4.03-9-9-9zm0 16c-3.86 0-7-3.14-7-7s3.14-7 7-7 7 3.14 7 7-3.14 7-7 7z"></path></svg>
+<svg class="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"></path></svg>
+<div class="w-5 h-2.5 border border-gray-400 rounded-sm p-0.5 flex items-center">
+<div class="w-full h-full bg-white rounded-2xs"></div>
+</div>
+</div>
+</div>
+<!-- Navigation & Header Title -->
+<div class="flex items-center justify-between mt-1">
+<div class="flex items-center space-x-3">
+<button aria-label="Go back" class="w-8 h-8 rounded-full bg-[#1e232e] text-gray-300 flex items-center justify-center active:scale-95 transition-transform" id="backBtn">
+<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+<path d="M15 19l-7-7 7-7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"></path>
+</svg>
+</button>
+<div>
+<span class="text-[10px] font-bold uppercase tracking-widest text-[#22c55e] block leading-none">DAVE'S PLACE</span>
+<h1 class="text-xl font-black text-white tracking-tight mt-0.5" id="screenTitle">Bob's Chips</h1>
+</div>
+</div>
+<!-- Screen Mode Selector / Segmented Tabs -->
+<div class="flex bg-[#191d26] p-1 rounded-xl border border-[#262b37] text-xs font-semibold">
+<button class="px-2.5 py-1 rounded-lg bg-[#22c55e] text-black font-bold transition-all shadow-sm" id="tabChips">Chips</button>
+<button class="px-2.5 py-1 rounded-lg text-gray-400 hover:text-white transition-all" id="tabCashOut">Cash-Outs</button>
+<button class="px-2.5 py-1 rounded-lg text-gray-400 hover:text-white transition-all" id="tabSettlement">Settlement</button>
+</div>
+</div>
+</header>
+<!-- END: TopBar -->
+<!-- BEGIN: BalancedPoolBanner -->
+<div class="px-5 pt-3 pb-1">
+<div class="flex items-center justify-between px-3.5 py-2.5 bg-[#122419] border border-[#22c55e]/30 rounded-xl text-xs font-semibold text-[#4ade80]">
+<div class="flex items-center space-x-2">
+<span class="w-2 h-2 rounded-full bg-[#22c55e] animate-pulse"></span>
+<span class="tracking-wide">Balanced Pool</span>
+</div>
+<span class="font-mono text-xs tracking-wider text-emerald-300 font-bold">$230.00 / $230.00</span>
+</div>
+</div>
+<!-- END: BalancedPoolBanner -->
+<!-- Scrollable Content Canvas -->
+<main class="flex-1 px-5 pt-3 pb-24 overflow-y-auto hide-scrollbar">
+<!-- ============================================== -->
+<!-- VIEW 1: BOB'S CHIPS COLOR COUNTER (Frame 8)   -->
+<!-- ============================================== -->
+<section class="space-y-4" id="viewBobChips">
+<!-- Subtitle & Tally Total Header Banner -->
+<div class="flex items-center justify-between pt-1">
+<div>
+<span class="text-xs font-bold text-gray-400 uppercase tracking-wider">CHIP BY COLOR COUNTER</span>
+<p class="text-[11px] text-gray-500">Tap + or - to tally player's chips</p>
+</div>
+<div class="text-right">
+<span class="text-[10px] uppercase font-bold tracking-wider text-gray-400 block">Tally Total</span>
+<span class="text-2xl font-black text-[#22c55e] tracking-tight leading-tight" id="bobTotalDisplay">$115.00</span>
+</div>
+</div>
+<!-- Stepper Cards List -->
+<div class="space-y-2.5">
+<!-- White Chip ($1.00) -->
+<div class="flex items-center justify-between p-3.5 bg-[#171a22] border border-[#252a36] rounded-2xl shadow-sm">
+<div class="flex items-center space-x-3.5">
+<div class="w-10 h-10 rounded-full border-4 border-dashed border-gray-300 bg-white flex items-center justify-center shadow-md">
+<div class="w-4 h-4 rounded-full border border-gray-300 bg-gray-100"></div>
+</div>
+<div>
+<span class="text-sm font-bold text-white block">White</span>
+<span class="text-xs text-gray-400 font-mono">Value: $1.00</span>
+</div>
+</div>
+<!-- Quantity Stepper -->
+<div class="flex items-center space-x-3">
+<button class="w-9 h-9 rounded-xl bg-[#232733] border border-[#313747] text-lg font-bold text-gray-300 hover:text-white flex items-center justify-center active:scale-90 transition" onclick="updateChip('white', -1)">-</button>
+<span class="w-7 text-center font-mono font-bold text-base text-white" id="qty-white">15</span>
+<button class="w-9 h-9 rounded-xl bg-[#f97316] text-white text-lg font-bold flex items-center justify-center active:scale-90 hover:bg-[#ea580c] transition shadow-md shadow-orange-950" onclick="updateChip('white', 1)">+</button>
+</div>
+</div>
+<!-- Red Chip ($5.00) -->
+<div class="flex items-center justify-between p-3.5 bg-[#171a22] border border-[#252a36] rounded-2xl shadow-sm">
+<div class="flex items-center space-x-3.5">
+<div class="w-10 h-10 rounded-full border-4 border-dashed border-red-400 bg-red-600 flex items-center justify-center shadow-md">
+<div class="w-4 h-4 rounded-full border border-red-300 bg-red-800"></div>
+</div>
+<div>
+<span class="text-sm font-bold text-white block">Red</span>
+<span class="text-xs text-gray-400 font-mono">Value: $5.00</span>
+</div>
+</div>
+<!-- Quantity Stepper -->
+<div class="flex items-center space-x-3">
+<button class="w-9 h-9 rounded-xl bg-[#232733] border border-[#313747] text-lg font-bold text-gray-300 hover:text-white flex items-center justify-center active:scale-90 transition" onclick="updateChip('red', -1)">-</button>
+<span class="w-7 text-center font-mono font-bold text-base text-white" id="qty-red">12</span>
+<button class="w-9 h-9 rounded-xl bg-[#f97316] text-white text-lg font-bold flex items-center justify-center active:scale-90 hover:bg-[#ea580c] transition shadow-md shadow-orange-950" onclick="updateChip('red', 1)">+</button>
+</div>
+</div>
+<!-- Blue Chip ($10.00) -->
+<div class="flex items-center justify-between p-3.5 bg-[#171a22] border border-[#252a36] rounded-2xl shadow-sm">
+<div class="flex items-center space-x-3.5">
+<div class="w-10 h-10 rounded-full border-4 border-dashed border-sky-400 bg-blue-600 flex items-center justify-center shadow-md">
+<div class="w-4 h-4 rounded-full border border-blue-300 bg-blue-800"></div>
+</div>
+<div>
+<span class="text-sm font-bold text-white block">Blue</span>
+<span class="text-xs text-gray-400 font-mono">Value: $10.00</span>
+</div>
+</div>
+<!-- Quantity Stepper -->
+<div class="flex items-center space-x-3">
+<button class="w-9 h-9 rounded-xl bg-[#232733] border border-[#313747] text-lg font-bold text-gray-300 hover:text-white flex items-center justify-center active:scale-90 transition" onclick="updateChip('blue', -1)">-</button>
+<span class="w-7 text-center font-mono font-bold text-base text-white" id="qty-blue">4</span>
+<button class="w-9 h-9 rounded-xl bg-[#f97316] text-white text-lg font-bold flex items-center justify-center active:scale-90 hover:bg-[#ea580c] transition shadow-md shadow-orange-950" onclick="updateChip('blue', 1)">+</button>
+</div>
+</div>
+<!-- Green Chip ($25.00) -->
+<div class="flex items-center justify-between p-3.5 bg-[#171a22] border border-[#252a36] rounded-2xl shadow-sm">
+<div class="flex items-center space-x-3.5">
+<div class="w-10 h-10 rounded-full border-4 border-dashed border-emerald-300 bg-emerald-600 flex items-center justify-center shadow-md">
+<div class="w-4 h-4 rounded-full border border-emerald-200 bg-emerald-800"></div>
+</div>
+<div>
+<span class="text-sm font-bold text-white block">Green</span>
+<span class="text-xs text-gray-400 font-mono">Value: $25.00</span>
+</div>
+</div>
+<!-- Quantity Stepper -->
+<div class="flex items-center space-x-3">
+<button class="w-9 h-9 rounded-xl bg-[#232733] border border-[#313747] text-lg font-bold text-gray-300 hover:text-white flex items-center justify-center active:scale-90 transition" onclick="updateChip('green', -1)">-</button>
+<span class="w-7 text-center font-mono font-bold text-base text-white" id="qty-green">0</span>
+<button class="w-9 h-9 rounded-xl bg-[#f97316] text-white text-lg font-bold flex items-center justify-center active:scale-90 hover:bg-[#ea580c] transition shadow-md shadow-orange-950" onclick="updateChip('green', 1)">+</button>
+</div>
+</div>
+<!-- Black Chip ($50.00) -->
+<div class="flex items-center justify-between p-3.5 bg-[#171a22] border border-[#252a36] rounded-2xl shadow-sm">
+<div class="flex items-center space-x-3.5">
+<div class="w-10 h-10 rounded-full border-4 border-dashed border-neutral-600 bg-neutral-900 flex items-center justify-center shadow-md">
+<div class="w-4 h-4 rounded-full border border-neutral-700 bg-black"></div>
+</div>
+<div>
+<span class="text-sm font-bold text-white block">Black</span>
+<span class="text-xs text-gray-400 font-mono">Value: $50.00</span>
+</div>
+</div>
+<!-- Quantity Stepper -->
+<div class="flex items-center space-x-3">
+<button class="w-9 h-9 rounded-xl bg-[#232733] border border-[#313747] text-lg font-bold text-gray-300 hover:text-white flex items-center justify-center active:scale-90 transition" onclick="updateChip('black', -1)">-</button>
+<span class="w-7 text-center font-mono font-bold text-base text-white" id="qty-black">0</span>
+<button class="w-9 h-9 rounded-xl bg-[#f97316] text-white text-lg font-bold flex items-center justify-center active:scale-90 hover:bg-[#ea580c] transition shadow-md shadow-orange-950" onclick="updateChip('black', 1)">+</button>
+</div>
+</div>
+</div>
+<!-- Sticky Bottom Action Button for Bob's Chips -->
+<div class="pt-4">
+<button class="w-full py-4 bg-[#22c55e] hover:bg-[#1eb354] active:scale-[0.99] text-black font-extrabold rounded-2xl text-base shadow-lg shadow-green-950/40 transition" id="applyCashoutBtn">
+            Apply to Bob's Cash-out
+          </button>
+</div>
+</section>
+<!-- ============================================== -->
+<!-- VIEW 2: ENTER CASH-OUTS OVERVIEW (Frame 7)    -->
+<!-- ============================================== -->
+<section class="space-y-3 hidden" id="viewCashOuts">
+<div class="flex items-center justify-between pt-1">
+<div>
+<span class="text-xs font-bold text-gray-400 uppercase tracking-wider">PLAYER LEDGER</span>
+<p class="text-[11px] text-gray-500">6 of 6 Players Active</p>
+</div>
+<div class="text-right">
+<span class="text-[10px] uppercase font-bold tracking-wider text-gray-400 block">Total Pot</span>
+<span class="text-base font-bold text-[#22c55e]">$230</span>
+</div>
+</div>
+<!-- Player Cashout Rows -->
+<div class="space-y-2">
+<!-- Ann -->
+<div class="flex items-center justify-between p-3 bg-[#171a22] border border-[#252a36] rounded-xl">
+<div>
+<span class="font-bold text-sm text-white block">Ann</span>
+<span class="text-[11px] text-gray-400">In: $20</span>
+</div>
+<div class="flex items-center space-x-3">
+<button class="px-3 py-1.5 bg-[#232733] border border-[#323847] rounded-lg text-xs text-gray-300 font-medium">Auto</button>
+<span class="font-mono font-bold text-emerald-400 text-sm">$75</span>
+</div>
+</div>
+<!-- Bob (Selected) -->
+<div class="flex items-center justify-between p-3 bg-[#19221d] border border-[#22c55e]/40 rounded-xl">
+<div>
+<div class="flex items-center space-x-2">
+<span class="font-bold text-sm text-white">Bob</span>
+<span class="px-1.5 py-0.5 rounded bg-[#22c55e]/20 text-[#22c55e] text-[10px] font-bold">Tallied</span>
+</div>
+<span class="text-[11px] text-gray-400">In: $50</span>
+</div>
+<div class="flex items-center space-x-3">
+<button class="px-3 py-1.5 bg-[#22c55e] text-black font-bold rounded-lg text-xs" onclick="switchView('chips')">Edit Chips</button>
+<span class="font-mono font-bold text-emerald-400 text-sm">$115</span>
+</div>
+</div>
+<!-- Elena -->
+<div class="flex items-center justify-between p-3 bg-[#171a22] border border-[#252a36] rounded-xl">
+<div>
+<span class="font-bold text-sm text-white block">Elena</span>
+<span class="text-[11px] text-gray-400">In: $20</span>
+</div>
+<div class="flex items-center space-x-3">
+<button class="px-3 py-1.5 bg-[#232733] border border-[#323847] rounded-lg text-xs text-gray-300 font-medium">Auto</button>
+<span class="font-mono font-bold text-emerald-400 text-sm">$30</span>
+</div>
+</div>
+<!-- Charlie -->
+<div class="flex items-center justify-between p-3 bg-[#171a22] border border-[#252a36] rounded-xl">
+<div>
+<span class="font-bold text-sm text-white block">Charlie</span>
+<span class="text-[11px] text-gray-400">In: $40</span>
+</div>
+<div class="flex items-center space-x-3">
+<button class="px-3 py-1.5 bg-[#232733] border border-[#323847] rounded-lg text-xs text-gray-300 font-medium">Auto</button>
+<span class="font-mono font-bold text-rose-400 text-sm">$10</span>
+</div>
+</div>
+<!-- Dave -->
+<div class="flex items-center justify-between p-3 bg-[#171a22] border border-[#252a36] rounded-xl">
+<div>
+<span class="font-bold text-sm text-white block">Dave (Host)</span>
+<span class="text-[11px] text-gray-400">In: $40</span>
+</div>
+<div class="flex items-center space-x-3">
+<button class="px-3 py-1.5 bg-[#232733] border border-[#323847] rounded-lg text-xs text-gray-300 font-medium">Auto</button>
+<span class="font-mono font-bold text-rose-400 text-sm">$0</span>
+</div>
+</div>
+<!-- Frank -->
+<div class="flex items-center justify-between p-3 bg-[#171a22] border border-[#252a36] rounded-xl">
+<div>
+<span class="font-bold text-sm text-white block">Frank</span>
+<span class="text-[11px] text-gray-400">In: $60</span>
+</div>
+<div class="flex items-center space-x-3">
+<button class="px-3 py-1.5 bg-[#232733] border border-[#323847] rounded-lg text-xs text-gray-300 font-medium">Auto</button>
+<span class="font-mono font-bold text-rose-400 text-sm">$0</span>
+</div>
+</div>
+</div>
+<div class="pt-4">
+<button class="w-full py-4 bg-[#1e232e] border border-[#2c3242] hover:bg-[#252a36] text-white font-bold rounded-2xl text-sm flex items-center justify-center space-x-2 transition" onclick="switchView('settlement')">
+<span>Calculate Settlements</span>
+<svg class="w-4 h-4 text-[#22c55e]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M14 5l7 7m0 0l-7 7m7-7H3" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+</button>
+</div>
+</section>
+<!-- ============================================== -->
+<!-- VIEW 3: SETTLEMENTS & SHARING (Frames 9 & 10)  -->
+<!-- ============================================== -->
+<section class="space-y-4 hidden" id="viewSettlements">
+<!-- Subheader & Total Handled -->
+<div class="flex items-center justify-between pt-1">
+<div>
+<span class="text-[10px] font-extrabold uppercase tracking-wider text-gray-400 block">SETTLEMENT ENGINE</span>
+<span class="text-xs font-bold text-gray-300">Optimized Cash Routes</span>
+</div>
+<div class="text-right">
+<span class="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">Total Handled</span>
+<span class="text-sm font-black font-mono text-[#22c55e]">$230.00</span>
+</div>
+</div>
+<!-- Fewest Transfers Required Card Header -->
+<div class="p-4 bg-[#14171f] border border-[#222733] rounded-2xl shadow-md">
+<div class="flex items-center justify-between pb-3 border-b border-[#212633]">
+<span class="text-[11px] font-extrabold uppercase tracking-widest text-[#f97316]">FEWEST TRANSFERS REQUIRED</span>
+<span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-[#22c55e]/15 text-[#22c55e]">5 Transfers</span>
+</div>
+<!-- Transfer Items List -->
+<div class="divide-y divide-[#1e232f] pt-1 text-sm">
+<!-- Dave pays Bob $40 -->
+<div class="py-3 flex items-center justify-between">
+<div class="flex items-center space-x-2.5">
+<span class="font-bold text-white">Dave</span>
+<span class="text-[11px] text-gray-400 px-1.5 py-0.5 rounded bg-[#202532]">pays</span>
+<span class="font-bold text-emerald-400">Bob</span>
+</div>
+<span class="text-base font-black font-mono text-[#22c55e]">$40</span>
+</div>
+<!-- Frank pays Ann $55 -->
+<div class="py-3 flex items-center justify-between">
+<div class="flex items-center space-x-2.5">
+<span class="font-bold text-white">Frank</span>
+<span class="text-[11px] text-gray-400 px-1.5 py-0.5 rounded bg-[#202532]">pays</span>
+<span class="font-bold text-emerald-400">Ann</span>
+</div>
+<span class="text-base font-black font-mono text-[#22c55e]">$55</span>
+</div>
+<!-- Charlie pays Bob $25 -->
+<div class="py-3 flex items-center justify-between">
+<div class="flex items-center space-x-2.5">
+<span class="font-bold text-white">Charlie</span>
+<span class="text-[11px] text-gray-400 px-1.5 py-0.5 rounded bg-[#202532]">pays</span>
+<span class="font-bold text-emerald-400">Bob</span>
+</div>
+<span class="text-base font-black font-mono text-[#22c55e]">$25</span>
+</div>
+<!-- Charlie pays Elena $5 -->
+<div class="py-3 flex items-center justify-between">
+<div class="flex items-center space-x-2.5">
+<span class="font-bold text-white">Charlie</span>
+<span class="text-[11px] text-gray-400 px-1.5 py-0.5 rounded bg-[#202532]">pays</span>
+<span class="font-bold text-emerald-400">Elena</span>
+</div>
+<span class="text-base font-black font-mono text-[#22c55e]">$5</span>
+</div>
+<!-- Frank pays Elena $5 -->
+<div class="py-3 flex items-center justify-between">
+<div class="flex items-center space-x-2.5">
+<span class="font-bold text-white">Frank</span>
+<span class="text-[11px] text-gray-400 px-1.5 py-0.5 rounded bg-[#202532]">pays</span>
+<span class="font-bold text-emerald-400">Elena</span>
+</div>
+<span class="text-base font-black font-mono text-[#22c55e]">$5</span>
+</div>
+</div>
+</div>
+<!-- Share & Results Output Card (Frame 10 style WhatsApp preview) -->
+<div class="bg-[#121b16] border border-[#22c55e]/30 rounded-2xl p-4 space-y-2">
+<div class="flex items-center justify-between">
+<span class="text-[11px] font-bold text-gray-400 uppercase tracking-wider">CHIPS BOOKKEEPING SUMMARY</span>
+<span class="w-6 h-6 rounded-full bg-[#22c55e] text-black flex items-center justify-center font-black text-xs">$</span>
+</div>
+<p class="text-xs text-gray-300 font-mono leading-relaxed bg-[#0c130f] p-2.5 rounded-xl border border-emerald-950">
+            Dave pays Bob $40<br>
+            Frank pays Ann $55<br>
+            Charlie pays Bob $25<br>
+            Charlie pays Elena $5<br>
+            Frank pays Elena $5<br>
+<span class="text-emerald-400 font-bold block pt-1.5 mt-1 border-t border-emerald-900/50">Oct 12, 2024 • Pool balanced: $230</span>
+</p>
+</div>
+<!-- Buttons Section (WhatsApp, Review, Copy) -->
+<div class="space-y-2.5 pt-2">
+<!-- WhatsApp Primary Button -->
+<button class="w-full py-3.5 px-4 bg-[#22c55e] hover:bg-[#1db053] active:scale-[0.99] text-black font-extrabold rounded-2xl text-sm flex items-center justify-center space-x-2 shadow-lg shadow-green-950/40 transition" id="btnWhatsApp">
+<svg class="w-5 h-5 fill-current" viewBox="0 0 24 24"><path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z"></path></svg>
+<span>Share to WhatsApp</span>
+</button>
+<!-- Review & Share Card Secondary Button -->
+<button class="w-full py-3.5 px-4 bg-[#1a2e22] hover:bg-[#203a2b] border border-[#22c55e]/40 text-[#4ade80] font-bold rounded-2xl text-sm transition">
+            Review &amp; Share Card
+          </button>
+<!-- Outlined Copy Clipboard Button -->
+<button class="w-full py-3 px-4 bg-transparent hover:bg-[#181c25] border border-[#2a303e] active:scale-[0.99] text-gray-300 font-semibold rounded-2xl text-xs flex items-center justify-center space-x-2 transition" id="btnCopy">
+<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+<span id="copyText">Copy to Clipboard</span>
+</button>
+</div>
+</section>
+</main>
+<!-- END: Scrollable Content Canvas -->
+<!-- BEGIN: Floating Bottom Bar Indicator / iOS Home Indicator -->
+<footer class="absolute bottom-1 inset-x-0 flex justify-center items-center pointer-events-none pb-1">
+<div class="w-32 h-1 bg-gray-600/60 rounded-full"></div>
+</footer>
+<!-- END: Floating Bottom Bar Indicator -->
+</div>
+<!-- JavaScript for Interactive Chip Calculations & Tab Switching -->
+<script data-purpose="chip-calculator">
+    // Chip Denominations and initial states matching Bob's Frame 8 tally
+    const chipValues = {
+      white: 1.00,
+      red: 5.00,
+      blue: 10.00,
+      green: 25.00,
+      black: 50.00
+    };
+
+    const chipCounts = {
+      white: 15,
+      red: 12,
+      blue: 4,
+      green: 0,
+      black: 0
+    };
+
+    function recalculateTotal() {
+      let sum = 0;
+      for (const color in chipValues) {
+        sum += chipCounts[color] * chipValues[color];
+      }
+      const formatted = '$' + sum.toFixed(2);
+      const totalElem = document.getElementById('bobTotalDisplay');
+      if (totalElem) {
+        totalElem.textContent = formatted;
+      }
+    }
+
+    function updateChip(color, delta) {
+      if (chipCounts[color] + delta >= 0) {
+        chipCounts[color] += delta;
+        const countElem = document.getElementById('qty-' + color);
+        if (countElem) {
+          countElem.textContent = chipCounts[color];
+        }
+        recalculateTotal();
+      }
+    }
+
+    // View Navigation Management
+    function switchView(target) {
+      const viewBob = document.getElementById('viewBobChips');
+      const viewCash = document.getElementById('viewCashOuts');
+      const viewSettlements = document.getElementById('viewSettlements');
+      const screenTitle = document.getElementById('screenTitle');
+
+      const tabChips = document.getElementById('tabChips');
+      const tabCashOut = document.getElementById('tabCashOut');
+      const tabSettlement = document.getElementById('tabSettlement');
+
+      // Reset tabs styling
+      [tabChips, tabCashOut, tabSettlement].forEach(btn => {
+        btn.className = "px-2.5 py-1 rounded-lg text-gray-400 hover:text-white transition-all";
+      });
+
+      // Hide all views
+      viewBob.classList.add('hidden');
+      viewCash.classList.add('hidden');
+      viewSettlements.classList.add('hidden');
+
+      if (target === 'chips') {
+        viewBob.classList.remove('hidden');
+        tabChips.className = "px-2.5 py-1 rounded-lg bg-[#22c55e] text-black font-bold transition-all shadow-sm";
+        screenTitle.textContent = "Bob's Chips";
+      } else if (target === 'cashouts') {
+        viewCash.classList.remove('hidden');
+        tabCashOut.className = "px-2.5 py-1 rounded-lg bg-[#22c55e] text-black font-bold transition-all shadow-sm";
+        screenTitle.textContent = "Enter Cash-Outs";
+      } else if (target === 'settlement') {
+        viewSettlements.classList.remove('hidden');
+        tabSettlement.className = "px-2.5 py-1 rounded-lg bg-[#22c55e] text-black font-bold transition-all shadow-sm";
+        screenTitle.textContent = "Settlements";
+      }
+    }
+
+    // Bind navigation buttons
+    document.getElementById('tabChips').addEventListener('click', () => switchView('chips'));
+    document.getElementById('tabCashOut').addEventListener('click', () => switchView('cashouts'));
+    document.getElementById('tabSettlement').addEventListener('click', () => switchView('settlement'));
+
+    document.getElementById('applyCashoutBtn').addEventListener('click', () => {
+      switchView('cashouts');
+    });
+
+    document.getElementById('backBtn').addEventListener('click', () => {
+      // Step backwards through navigation
+      const isChips = !document.getElementById('viewBobChips').classList.contains('hidden');
+      const isCashouts = !document.getElementById('viewCashOuts').classList.contains('hidden');
+      if (isChips) {
+        switchView('cashouts');
+      } else if (isCashouts) {
+        switchView('chips');
+      } else {
+        switchView('cashouts');
+      }
+    });
+
+    // Copy to clipboard mock
+    document.getElementById('btnCopy').addEventListener('click', function() {
+      const txt = "Dave pays Bob $40\nFrank pays Ann $55\nCharlie pays Bob $25\nCharlie pays Elena $5\nFrank pays Elena $5\nBalanced Pool: $230";
+      navigator.clipboard ? navigator.clipboard.writeText(txt) : null;
+      const copySpan = document.getElementById('copyText');
+      copySpan.textContent = "Copied to Clipboard!";
+      setTimeout(() => {
+        copySpan.textContent = "Copy to Clipboard";
+      }, 2000);
+    });
+  </script>
+</body></html>

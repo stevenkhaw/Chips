@@ -1,0 +1,250 @@
+<!DOCTYPE html><html lang="en"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0, viewport-fit=cover" name="viewport">
+<title>Chips - Live Table (Active Night)</title>
+<!-- Tailwind CSS CDN with forms and container plugins -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            appDark: '#0D0E10',
+            cardBg: '#18191C',
+            chipGreen: '#2CD96B',
+            accentOrange: '#FF7A00',
+            textGray: '#8E929B',
+            subTextGray: '#60646D',
+            avatarBg: '#23252A',
+          },
+          fontFamily: {
+            sans: ['-apple-system', 'BlinkMacSystemFont', '"SF Pro Text"', '"SF Pro Display"', 'system-ui', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+<!-- Custom Component Styles -->
+<style data-purpose="custom-scroll-and-touch">
+    /* Remove tap highlight on mobile devices */
+    * {
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+    /* Hide scrollbar for a native mobile look */
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+  </style>
+</head>
+<body class="bg-black text-white flex justify-center items-center min-h-screen font-sans antialiased selection:bg-accentOrange selection:text-white">
+<!-- BEGIN: Mobile Device Frame -->
+<div class="w-full max-w-[400px] h-[100dvh] max-h-[850px] bg-appDark flex flex-col justify-between overflow-hidden relative shadow-2xl md:rounded-[44px] border border-[#1f2125]" data-purpose="mobile-frame">
+<!-- BEGIN: iOS Status Bar -->
+<div class="w-full h-11 pt-3 px-7 flex justify-between items-center z-30 shrink-0 select-none" data-purpose="status-bar">
+<span class="text-xs font-semibold text-white tracking-tight">9:41</span>
+<div class="flex items-center space-x-1.5 text-white">
+<!-- Cellular Signal Icon -->
+<svg class="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
+<path d="M12 3c-4.97 0-9 4.03-9 9 0 2.12.74 4.07 1.97 5.61L4.35 18.25c-.2-.2-.51-.2-.71 0-.2.2-.2.51 0 .71l1.77 1.77c.2.2.51.2.71 0 .2-.2.2-.51 0-.71l-.64-.64C6.73 20.44 9.22 21 12 21c4.97 0 9-4.03 9-9s-4.03-9-9-9zm0 2c3.87 0 7 3.13 7 7 0 1.63-.56 3.13-1.5 4.34l-9.84-9.84C8.87 5.56 10.37 5 12 5zm-5.5 7c0-1.1.27-2.14.75-3.05l5.3 5.3C11.64 14.73 10.6 15 9.5 15c-1.66 0-3-1.34-3-3z"></path>
+</svg>
+<!-- Wifi Icon -->
+<svg class="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
+<path d="M12 4C7.31 4 3.07 5.9 0 8.98L12 21 24 8.98A16.88 16.88 0 0012 4zm0 3.3c3.78 0 7.23 1.44 9.87 3.82L12 18.27 2.13 11.12C4.77 8.74 8.22 7.3 12 7.3z"></path>
+</svg>
+<!-- Battery Icon -->
+<div class="w-5 h-2.5 border border-white rounded-[4px] p-0.5 flex items-center">
+<div class="h-full w-3/4 bg-white rounded-2xs"></div>
+</div>
+</div>
+</div>
+<!-- END: iOS Status Bar -->
+<!-- BEGIN: Top Navigation & Header -->
+<header class="px-5 pt-1 pb-3 flex justify-between items-start shrink-0" data-purpose="screen-header">
+<div class="flex items-start gap-3">
+<!-- Back Chevron -->
+<button aria-label="Go back" class="text-white hover:opacity-80 transition active:scale-95 pt-0.5" type="button">
+<svg class="w-6 h-6 stroke-[2.5]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+<path d="M15.75 19.5L8.25 12l7.5-7.5" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</button>
+<!-- Room Name and Active Night Status -->
+<div>
+<div class="flex items-center space-x-1.5 leading-none">
+<span class="w-1.5 h-1.5 rounded-full bg-chipGreen animate-pulse"></span>
+<span class="text-[10px] uppercase font-bold tracking-wider text-textGray">ACTIVE NIGHT</span>
+</div>
+<h1 class="text-xl font-bold text-white tracking-tight mt-0.5">Dave's place</h1>
+</div>
+</div>
+<!-- Pot Pool Tag Banner -->
+<div class="bg-[#10241A] border border-[#1b3d2b] px-3.5 py-1 rounded-xl flex flex-col items-end text-right shadow-sm" data-purpose="pot-pool-tag">
+<span class="text-chipGreen font-black text-sm leading-tight">$230</span>
+<span class="text-[10px] font-medium text-chipGreen/80 leading-none">Pot Pool</span>
+</div>
+</header>
+<!-- END: Top Navigation & Header -->
+<!-- BEGIN: Main Scrollable Content -->
+<main class="flex-1 overflow-y-auto no-scrollbar px-4 pt-1 pb-4 flex flex-col gap-3">
+<!-- Rebuy Hint Sub-banner -->
+<section class="bg-[#17191E] border border-[#212329] rounded-xl px-3 py-2 flex items-center justify-center gap-2" data-purpose="rebuy-notification-banner">
+<svg class="w-3.5 h-3.5 text-accentOrange fill-current" viewBox="0 0 24 24">
+<path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"></path>
+</svg>
+<p class="text-xs text-textGray font-medium text-center">
+          Tap <span class="text-white font-bold">+</span> to log default rebuy (<span class="text-white">$20</span>)
+        </p>
+</section>
+<!-- Player List -->
+<section class="flex flex-col gap-2.5" data-purpose="player-list">
+<!-- Player: Dave (Host) -->
+<article class="bg-cardBg rounded-2xl p-3 flex items-center justify-between border border-[#22242a] shadow-md" data-purpose="player-card">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-full bg-avatarBg flex items-center justify-center text-sm font-bold text-white border border-[#2e3038]">
+              D
+            </div>
+<div class="flex flex-col">
+<span class="text-sm font-semibold text-white tracking-tight">Dave <span class="text-xs font-normal text-textGray">(Host)</span></span>
+<div class="flex items-center gap-1.5 mt-0.5">
+<span class="text-[11px] font-medium text-textGray">In:</span>
+<span class="text-[11px] font-semibold text-textGray">$20</span>
+<span class="text-[11px] font-semibold text-textGray">$20</span>
+</div>
+</div>
+</div>
+<!-- Orange Plus Action Button -->
+<button aria-label="Add rebuy for Dave" class="w-10 h-10 rounded-xl bg-accentOrange flex items-center justify-center shadow-lg shadow-accentOrange/20 hover:brightness-110 active:scale-95 transition-transform duration-100" type="button">
+<svg class="w-5 h-5 text-white stroke-[3]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+<path d="M12 4.5v15m7.5-7.5h-15" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</button>
+</article>
+<!-- Player: Ann -->
+<article class="bg-cardBg rounded-2xl p-3 flex items-center justify-between border border-[#22242a] shadow-md" data-purpose="player-card">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-full bg-avatarBg flex items-center justify-center text-sm font-bold text-white border border-[#2e3038]">
+              A
+            </div>
+<div class="flex flex-col">
+<span class="text-sm font-semibold text-white tracking-tight">Ann</span>
+<div class="flex items-center gap-1.5 mt-0.5">
+<span class="text-[11px] font-medium text-textGray">In:</span>
+<span class="text-[11px] font-semibold text-textGray">$20</span>
+</div>
+</div>
+</div>
+<!-- Orange Plus Action Button -->
+<button aria-label="Add rebuy for Ann" class="w-10 h-10 rounded-xl bg-accentOrange flex items-center justify-center shadow-lg shadow-accentOrange/20 hover:brightness-110 active:scale-95 transition-transform duration-100" type="button">
+<svg class="w-5 h-5 text-white stroke-[3]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+<path d="M12 4.5v15m7.5-7.5h-15" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</button>
+</article>
+<!-- Player: Bob -->
+<article class="bg-cardBg rounded-2xl p-3 flex items-center justify-between border border-[#22242a] shadow-md" data-purpose="player-card">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-full bg-avatarBg flex items-center justify-center text-sm font-bold text-white border border-[#2e3038]">
+              B
+            </div>
+<div class="flex flex-col">
+<span class="text-sm font-semibold text-white tracking-tight">Bob</span>
+<div class="flex items-center gap-1.5 mt-0.5">
+<span class="text-[11px] font-medium text-textGray">In:</span>
+<span class="text-[11px] font-semibold text-textGray">$20</span>
+<span class="text-[11px] font-semibold text-textGray">$20</span>
+</div>
+</div>
+</div>
+<!-- Orange Plus Action Button -->
+<button aria-label="Add rebuy for Bob" class="w-10 h-10 rounded-xl bg-accentOrange flex items-center justify-center shadow-lg shadow-accentOrange/20 hover:brightness-110 active:scale-95 transition-transform duration-100" type="button">
+<svg class="w-5 h-5 text-white stroke-[3]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+<path d="M12 4.5v15m7.5-7.5h-15" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</button>
+</article>
+<!-- Player: Charlie -->
+<article class="bg-cardBg rounded-2xl p-3 flex items-center justify-between border border-[#22242a] shadow-md" data-purpose="player-card">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-full bg-avatarBg flex items-center justify-center text-sm font-bold text-white border border-[#2e3038]">
+              C
+            </div>
+<div class="flex flex-col">
+<span class="text-sm font-semibold text-white tracking-tight">Charlie</span>
+<div class="flex items-center gap-1.5 mt-0.5">
+<span class="text-[11px] font-medium text-textGray">In:</span>
+<span class="text-[11px] font-semibold text-textGray">$20</span>
+<span class="text-[11px] font-semibold text-textGray">$20</span>
+</div>
+</div>
+</div>
+<!-- Orange Plus Action Button -->
+<button aria-label="Add rebuy for Charlie" class="w-10 h-10 rounded-xl bg-accentOrange flex items-center justify-center shadow-lg shadow-accentOrange/20 hover:brightness-110 active:scale-95 transition-transform duration-100" type="button">
+<svg class="w-5 h-5 text-white stroke-[3]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+<path d="M12 4.5v15m7.5-7.5h-15" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</button>
+</article>
+<!-- Player: Elena -->
+<article class="bg-cardBg rounded-2xl p-3 flex items-center justify-between border border-[#22242a] shadow-md" data-purpose="player-card">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-full bg-avatarBg flex items-center justify-center text-sm font-bold text-white border border-[#2e3038]">
+              E
+            </div>
+<div class="flex flex-col">
+<span class="text-sm font-semibold text-white tracking-tight">Elena</span>
+<div class="flex items-center gap-1.5 mt-0.5">
+<span class="text-[11px] font-medium text-textGray">In:</span>
+<span class="text-[11px] font-semibold text-textGray">$20</span>
+</div>
+</div>
+</div>
+<!-- Orange Plus Action Button -->
+<button aria-label="Add rebuy for Elena" class="w-10 h-10 rounded-xl bg-accentOrange flex items-center justify-center shadow-lg shadow-accentOrange/20 hover:brightness-110 active:scale-95 transition-transform duration-100" type="button">
+<svg class="w-5 h-5 text-white stroke-[3]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+<path d="M12 4.5v15m7.5-7.5h-15" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</button>
+</article>
+<!-- Player: Frank -->
+<article class="bg-cardBg rounded-2xl p-3 flex items-center justify-between border border-[#22242a] shadow-md" data-purpose="player-card">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-full bg-avatarBg flex items-center justify-center text-sm font-bold text-white border border-[#2e3038]">
+              F
+            </div>
+<div class="flex flex-col">
+<span class="text-sm font-semibold text-white tracking-tight">Frank</span>
+<div class="flex items-center gap-1.5 mt-0.5">
+<span class="text-[11px] font-medium text-textGray">In:</span>
+<span class="text-[11px] font-semibold text-textGray">$20</span>
+<span class="text-[11px] font-semibold text-textGray">$20</span>
+</div>
+</div>
+</div>
+<!-- Orange Plus Action Button -->
+<button aria-label="Add rebuy for Frank" class="w-10 h-10 rounded-xl bg-accentOrange flex items-center justify-center shadow-lg shadow-accentOrange/20 hover:brightness-110 active:scale-95 transition-transform duration-100" type="button">
+<svg class="w-5 h-5 text-white stroke-[3]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+<path d="M12 4.5v15m7.5-7.5h-15" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</button>
+</article>
+</section>
+</main>
+<!-- END: Main Scrollable Content -->
+<!-- BEGIN: Fixed Bottom Navigation & Cash-Out Action -->
+<footer class="p-4 pt-2 bg-gradient-to-t from-appDark via-appDark/95 to-transparent flex flex-col items-center" data-purpose="bottom-bar">
+<!-- Go to Cash-Out CTA -->
+<button class="w-full h-12 bg-accentOrange hover:brightness-110 active:scale-[0.98] transition-all duration-150 rounded-2xl font-bold text-sm tracking-wide text-[#1A0E00] flex items-center justify-center shadow-lg shadow-accentOrange/25" type="button">
+        Go to Cash-Out →
+      </button>
+<!-- iOS Home Indicator -->
+<div class="w-32 h-1 bg-[#4A4B4F] rounded-full mt-4 mb-1" data-purpose="home-indicator"></div>
+</footer>
+<!-- END: Fixed Bottom Navigation & Cash-Out Action -->
+</div>
+<!-- END: Mobile Device Frame -->
+</body></html>
