@@ -112,8 +112,8 @@ Global config. Chip counts are NOT persisted; the chip sheet is a calculator tha
 | default_buyin_cents | INTEGER NOT NULL | initial 2000 ($20) |
 | currency_symbol | TEXT NOT NULL | initial "$" |
 
-Seeded on first launch. Chip denoms seeded with a common set (white 25c... configurable)
-only if user opens chip settings and table is empty — otherwise left empty.
+Settings row seeded on first launch. `chip_denoms` starts empty; the chip sheet and
+"Use chips" button are hidden until the user adds at least one denomination in Settings.
 
 ## 5. Domain logic (`domain/`)
 
