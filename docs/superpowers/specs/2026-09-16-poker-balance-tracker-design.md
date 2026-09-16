@@ -134,12 +134,14 @@ SettlementResult = {
 
 Goal: fewest transfers. Two phases:
 
-**Phase 1 — zero-sum subsets (exact minimization, n ≤ 12).**
-Repeatedly find the smallest non-empty subset of remaining non-zero players whose nets
-sum to exactly zero. Settle that subset internally with the greedy method (a zero-sum
-subset of size k settles in k−1 transfers). Remove it. Stop when no zero-sum subset
-exists. Search by increasing subset size (2, 3, ...) over bitmasks; with n ≤ 12 this is
-at most 4096 subsets per pass, trivially fast. For n > 12 skip phase 1.
+**Phase 1 — maximum zero-sum partition (exact minimization, n ≤ 12).**
+Transfers needed = (number of non-zero players) − (number of disjoint zero-sum blocks
+they are split into), so minimising transfers means maximising blocks. Compute exactly
+with a subset DP over bitmasks: `dp[mask] = max_i dp[mask ^ bit_i] + (sum[mask] == 0 ? 1 : 0)`.
+Backtrack from the full mask to recover the blocks; each block of size k settles with the
+greedy method in k−1 transfers. O(n·2ⁿ) ≈ 49k steps at n = 12, trivially fast. For n > 12
+skip phase 1. (Note: "repeatedly peel the smallest zero-sum subset" is NOT exact and must
+not be used — a 9-player counterexample yields 7 transfers where 6 is optimal.)
 
 **Phase 2 — greedy on remainder.**
 Sort debtors (net < 0) by |net| desc and creditors (net > 0) by net desc. Two-pointer:
