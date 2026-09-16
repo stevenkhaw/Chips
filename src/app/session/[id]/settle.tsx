@@ -1,9 +1,11 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { Alert, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Avatar, Banner, Body, Caption, Divider, NavHeader, Overline, Row, Screen } from '@/components/ui';
+import { Avatar, Banner, Body, Button, Caption, Divider, NavHeader, Overline, Row, Screen, toastError } from '@/components/ui';
 import { MoneyText } from '@/components/MoneyText';
 import { TransferRow } from '@/components/TransferRow';
+import { ShareCard, SHARE_CARD_WIDTH } from '@/components/ShareCard';
+import { buildShareText, captureAndShare, copyToClipboard } from '@/share';
 import { useSessionsStore } from '@/store/useSessionsStore';
 import { useSettingsStore } from '@/store/useSettingsStore';
 import { summarize } from '@/domain/nets';
@@ -12,12 +14,18 @@ import { formatDate } from '@/date';
 import { colors, radius, space, textStyles } from '@/theme';
 
 export default function SettleScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, share } = useLocalSearchParams<{ id: string; share?: string }>();
   const router = useRouter();
   const detail = useSessionsStore((s) => s.detail);
   const open = useSessionsStore((s) => s.open);
   const symbol = useSettingsStore((s) => s.settings.currencySymbol);
   const [showDetails, setShowDetails] = useState(false);
+  const cardRef = useRef<View>(null);
+  const [cardHeight, setCardHeight] = useState(0);
+  const [sharing, setSharing] = useState(false);
+  const { width } = useWindowDimensions();
+  const previewWidth = width - space.lg * 2;
+  const previewScale = previewWidth / SHARE_CARD_WIDTH;
 
   useEffect(() => {
     if (id && detail?.session.id !== id) open(id);
@@ -25,6 +33,36 @@ export default function SettleScreen() {
   }, [id]);
 
   const math = useMemo(() => (detail ? summarize(detail) : null), [detail]);
+
+  const doShare = async () => {
+    setSharing(true);
+    try {
+      await captureAndShare(cardRef);
+    } catch (e) {
+      toastError(e);
+    } finally {
+      setSharing(false);
+    }
+  };
+
+  const doCopy = async () => {
+    if (!detail || !math) return;
+    try {
+      await copyToClipboard(buildShareText(detail, math, symbol));
+      Alert.alert('Copied', 'Settlement text copied to the clipboard.');
+    } catch (e) {
+      toastError(e);
+    }
+  };
+
+  useEffect(() => {
+    if (share !== '1' || !math || detail?.session.id !== id) return;
+    // Let the offscreen card lay out before capturing it.
+    const t = setTimeout(doShare, 300);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [share, math, detail?.session.id, id]);
+
   if (!detail || !math || detail.session.id !== id) {
     return (
       <Screen>
@@ -44,7 +82,14 @@ export default function SettleScreen() {
   const nightTitle = detail.session.title?.trim() ? detail.session.title : formatDate(detail.session.date);
 
   return (
-    <Screen scroll>
+    <Screen
+      scroll
+      footer={
+        <>
+          <Button label={sharing ? 'Preparing…' : 'Share image'} onPress={doShare} disabled={sharing} />
+          <Button label="Copy to clipboard" variant="secondary" size="md" onPress={doCopy} style={{ marginTop: space.sm }} />
+        </>
+      }>
       <NavHeader
         overline={nightTitle}
         overlineTone={balanced ? 'accent' : 'dim'}
@@ -167,6 +212,29 @@ export default function SettleScreen() {
           ))}
         </View>
       ) : null}
+
+      <Row style={s.sectionHead}>
+        <Overline>Message card</Overline>
+        <View style={{ flex: 1 }} />
+        <Caption tone="muted">Live preview</Caption>
+      </Row>
+      <View style={[s.preview, { width: previewWidth, height: Math.max(cardHeight * previewScale, 120) }]}>
+        <View
+          pointerEvents="none"
+          style={{ width: SHARE_CARD_WIDTH, transform: [{ scale: previewScale }], transformOrigin: 'top left' }}>
+          <ShareCard detail={detail} math={math} symbol={symbol} />
+        </View>
+      </View>
+
+      <View style={s.offscreen} pointerEvents="none">
+        <ShareCard
+          ref={cardRef}
+          detail={detail}
+          math={math}
+          symbol={symbol}
+          onLayout={(e) => setCardHeight(e.nativeEvent.layout.height)}
+        />
+      </View>
     </Screen>
   );
 }
@@ -216,4 +284,6 @@ const s = StyleSheet.create({
   cell: { ...textStyles.numericSm, color: colors.text },
   colName: { flex: 2 },
   col: { flex: 1, textAlign: 'right' },
+  preview: { overflow: 'hidden', borderRadius: radius.lg, marginBottom: space.md },
+  offscreen: { position: 'absolute', left: -SHARE_CARD_WIDTH * 2, top: 0, opacity: 0 },
 });
