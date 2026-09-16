@@ -57,5 +57,6 @@ export interface SessionDetail {
 export interface SessionSummary {
   session: Session;
   playerCount: number;
+  totalBuyinCents: number;
   topWinner: { name: string; netCents: number } | null;
 }
