@@ -47,6 +47,24 @@ describe('settle', () => {
     expect(r.transfers).toContainEqual({ from: 'E', to: 'B', amountCents: 1500 });
   });
 
+  it('9 players where peel-smallest-subset heuristic gives 7; optimum is 6', () => {
+    const vals = [-900, 500, -700, 600, 600, 200, 100, -800, 400];
+    const nets = vals.map((v, i) => n(`p${i}`, v));
+    const r = settle(nets);
+    expect(r.transfers).toHaveLength(6);
+    assertSettles(nets, r.transfers);
+  });
+
+  it('12 players: exact partition still runs and settles', () => {
+    const nets: Net[] = [];
+    for (let i = 0; i < 6; i++) nets.push(n(`w${i}`, 100 * (i + 1)));
+    for (let i = 0; i < 6; i++) nets.push(n(`l${i}`, -100 * (i + 1)));
+    const r = settle(nets);
+    expect(r.discrepancyCents).toBe(0);
+    expect(r.transfers).toHaveLength(6); // six exact pairs
+    assertSettles(nets, r.transfers);
+  });
+
   it('zero-net players never appear in transfers', () => {
     const r = settle([n('a', 500), n('zero', 0), n('b', -500)]);
     for (const t of r.transfers) {
