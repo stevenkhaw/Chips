@@ -9,11 +9,17 @@ import { colors, fonts, radius, space, TAP, textStyles } from '@/theme';
 export function ChipSheet({
   visible,
   playerName,
+  initialCounts,
+  onCountsChange,
   onUse,
   onCancel,
 }: {
   visible: boolean;
   playerName: string;
+  /** Seeds the counter on open — e.g. a per-player tally remembered for the rest of the night. */
+  initialCounts?: Record<string, number>;
+  /** Fires whenever counts change while the sheet is open, so the caller can remember them. */
+  onCountsChange?: (counts: Record<string, number>) => void;
   onUse: (cents: number) => void;
   onCancel: () => void;
 }) {
@@ -22,8 +28,16 @@ export function ChipSheet({
   const [counts, setCounts] = useState<Record<string, number>>({});
 
   useEffect(() => {
-    if (visible) setCounts({});
+    if (visible) setCounts(initialCounts ?? {});
+    // Seed once per open — not on every initialCounts identity change, or edits while a sheet
+    // is visible could get clobbered by a stale snapshot.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible]);
+
+  useEffect(() => {
+    if (visible) onCountsChange?.(counts);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [counts, visible]);
 
   const total = useMemo(() => chipsToCents(counts, denoms), [counts, denoms]);
   const setCount = (id: string, n: number) =>
@@ -34,7 +48,13 @@ export function ChipSheet({
       <Screen
         footer={
           <>
-            <Button label={`Apply to ${playerName}'s cash-out`} onPress={() => onUse(total)} />
+            <Button
+              label={`Apply to ${playerName}'s cash-out`}
+              onPress={() => {
+                onCountsChange?.(counts);
+                onUse(total);
+              }}
+            />
             <Button label="Cancel" variant="ghost" size="md" onPress={onCancel} style={{ marginTop: space.sm }} />
           </>
         }>

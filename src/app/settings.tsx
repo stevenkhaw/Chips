@@ -5,6 +5,7 @@ import {
   Body, Button, Caption, Divider, NavHeader, Overline, Row, Screen, toastError,
 } from '@/components/ui';
 import { AmountPad } from '@/components/AmountPad';
+import { seedStandardDenoms } from '@/chipPresets';
 import { useSettingsStore } from '@/store/useSettingsStore';
 import { formatCents, parseMoneyInput } from '@/domain/money';
 import type { ChipDenom } from '@/domain/types';
@@ -111,7 +112,14 @@ export default function SettingsScreen() {
             </View>
           ))}
         </View>
-      ) : null}
+      ) : (
+        <Button
+          label="Use standard set"
+          variant="secondary"
+          size="md"
+          onPress={() => safe(() => seedStandardDenoms(addDenom))}
+        />
+      )}
 
       <Button
         label="+ Add denomination"

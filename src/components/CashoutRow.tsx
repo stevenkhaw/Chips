@@ -1,6 +1,6 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { Avatar, Caption } from '@/components/ui';
+import { Avatar, Caption, IconButton } from '@/components/ui';
 import { MoneyText } from '@/components/MoneyText';
 import { formatCents } from '@/domain/money';
 import type { PlayerNetRow } from '@/domain/nets';
@@ -11,10 +11,12 @@ export function CashoutRow({
   row,
   onPress,
   onLongPress,
+  onCountChips,
 }: {
   row: PlayerNetRow;
   onPress: () => void;
   onLongPress: () => void;
+  onCountChips?: () => void;
 }) {
   const symbol = useSettingsStore((s) => s.settings.currencySymbol);
   const pending = row.cashoutCents === null;
@@ -44,6 +46,11 @@ export function CashoutRow({
           <MoneyText cents={row.netCents} signed variant="sm" />
         )}
       </View>
+      {onCountChips ? (
+        <View style={s.chipBtn}>
+          <IconButton glyph="🪙" onPress={onCountChips} accessibilityLabel="Count chips" variant="circle" />
+        </View>
+      ) : null}
     </Pressable>
   );
 }
@@ -64,4 +71,5 @@ const s = StyleSheet.create({
   name: { ...textStyles.labelMd, fontSize: 15, color: colors.text, marginBottom: 2 },
   right: { alignItems: 'flex-end' },
   placeholder: { ...textStyles.labelMd, color: colors.textMuted },
+  chipBtn: { marginLeft: space.sm },
 });

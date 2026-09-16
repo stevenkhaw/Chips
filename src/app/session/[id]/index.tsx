@@ -9,6 +9,7 @@ import { BuyinRow } from '@/components/BuyinRow';
 import { CashoutRow } from '@/components/CashoutRow';
 import { AmountPad } from '@/components/AmountPad';
 import { ChipSheet } from '@/components/ChipSheet';
+import { ChipSetupSheet } from '@/components/ChipSetupSheet';
 import { PlayerChecklist } from '@/components/PlayerChecklist';
 import { useSessionsStore } from '@/store/useSessionsStore';
 import { useSettingsStore } from '@/store/useSettingsStore';
@@ -39,13 +40,45 @@ export default function SessionScreen() {
   const [addingPlayer, setAddingPlayer] = useState(false);
   const [editingNight, setEditingNight] = useState(false);
   const [chipFor, setChipFor] = useState<{ spId: string; name: string } | null>(null);
+  const [chipSetupTarget, setChipSetupTarget] = useState<{ spId: string; name: string } | null>(null);
+  const [usedChipCounter, setUsedChipCounter] = useState(false);
   const denoms = useSettingsStore((s) => s.denoms);
 
-  // Holds a chip-sheet target that's waiting for the AmountPad's Modal to finish
-  // dismissing, so the two Modals never present/dismiss in the same commit (iOS races
-  // when that happens — see AmountPad's cashout "Use chips" extraAction below).
+  // Chip counts are a calculator only — never persisted to SQLite or zustand. Kept per
+  // player (by session-player id) for as long as this screen stays mounted.
+  const chipCountsRef = useRef<Record<string, Record<string, number>>>({});
+
+  // Holds a chip-sheet target that's waiting for another Modal (AmountPad or
+  // ChipSetupSheet) to finish dismissing, so the two Modals never present/dismiss in the
+  // same commit (iOS races when that happens — see the "Use chips" extraAction and the
+  // ChipSetupSheet's onSeeded below).
   const pendingChip = useRef<{ spId: string; name: string } | null>(null);
   const pendingChipTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const openChipsAfterDismiss = (target: { spId: string; name: string }) => {
+    pendingChip.current = target;
+    // Modal.onDismiss is iOS-only; Android has no reliable "fully dismissed" signal, so
+    // fall back to a fixed delay after the other modal starts closing.
+    if (Platform.OS === 'android') {
+      pendingChipTimer.current = setTimeout(() => {
+        if (pendingChip.current) {
+          setChipFor(pendingChip.current);
+          pendingChip.current = null;
+        }
+        pendingChipTimer.current = null;
+      }, 300);
+    }
+  };
+  const consumePendingChipOnDismiss = () => {
+    if (Platform.OS !== 'android' && pendingChip.current) {
+      setChipFor(pendingChip.current);
+      pendingChip.current = null;
+    }
+  };
+  const onCountChips = (spId: string, name: string) => {
+    if (denoms.length > 0) setChipFor({ spId, name });
+    else setChipSetupTarget({ spId, name });
+  };
 
   useEffect(() => {
     if (id) store.open(id);
@@ -182,6 +215,13 @@ export default function SessionScreen() {
         </>
       ) : (
         <>
+          {denoms.length === 0 || !usedChipCounter ? (
+            <Banner
+              kind="info"
+              text="Tap the chip button to count chips instead of typing."
+              style={{ marginBottom: space.md }}
+            />
+          ) : null}
           <StatusPill
             tone={balanced ? 'ok' : 'warn'}
             label={
@@ -202,6 +242,7 @@ export default function SessionScreen() {
                 row={row}
                 onPress={() => setPad({ kind: 'cashout', spId: d.sp.id, name: row.name, current: d.sp.cashoutCents })}
                 onLongPress={() => onRowLongPress(d.sp.id, row.name, d.buyins.length > 0)}
+                onCountChips={() => onCountChips(d.sp.id, row.name)}
               />
             );
           })}
@@ -255,30 +296,13 @@ export default function SessionScreen() {
                 label: 'Use chips',
                 onPress: () => {
                   if (pad.kind !== 'cashout') return;
-                  const target = { spId: pad.spId, name: pad.name };
-                  pendingChip.current = target;
+                  openChipsAfterDismiss({ spId: pad.spId, name: pad.name });
                   closePad();
-                  // Modal.onDismiss is iOS-only; Android has no reliable "fully dismissed"
-                  // signal, so fall back to a fixed delay after the pad starts closing.
-                  if (Platform.OS === 'android') {
-                    pendingChipTimer.current = setTimeout(() => {
-                      if (pendingChip.current) {
-                        setChipFor(pendingChip.current);
-                        pendingChip.current = null;
-                      }
-                      pendingChipTimer.current = null;
-                    }, 300);
-                  }
                 },
               }
             : undefined
         }
-        onDismiss={() => {
-          if (Platform.OS !== 'android' && pendingChip.current) {
-            setChipFor(pendingChip.current);
-            pendingChip.current = null;
-          }
-        }}
+        onDismiss={consumePendingChipOnDismiss}
         onCancel={closePad}
         onConfirm={(c) => {
           if (pad.kind === 'cashout') safe(() => store.setCashout(pad.spId, c));
@@ -318,11 +342,26 @@ export default function SessionScreen() {
       <ChipSheet
         visible={chipFor !== null}
         playerName={chipFor?.name ?? ''}
+        initialCounts={chipFor ? chipCountsRef.current[chipFor.spId] : undefined}
+        onCountsChange={(counts) => {
+          if (chipFor) chipCountsRef.current[chipFor.spId] = counts;
+        }}
         onCancel={() => setChipFor(null)}
         onUse={(cents) => {
           if (chipFor) safe(() => store.setCashout(chipFor.spId, cents));
+          setUsedChipCounter(true);
           setChipFor(null);
         }}
+      />
+
+      <ChipSetupSheet
+        visible={chipSetupTarget !== null}
+        onDismiss={consumePendingChipOnDismiss}
+        onSeeded={() => {
+          if (chipSetupTarget) openChipsAfterDismiss(chipSetupTarget);
+          setChipSetupTarget(null);
+        }}
+        onCancel={() => setChipSetupTarget(null)}
       />
     </Screen>
   );
