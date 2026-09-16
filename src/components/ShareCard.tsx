@@ -22,7 +22,7 @@ export const ShareCard = forwardRef<
   const nameOf = (pid: string) => math.rows.find((r) => r.playerId === pid)?.name ?? '?';
   const seedOf = (pid: string) => math.rows.find((r) => r.playerId === pid)?.colorSeed ?? 0;
   const disc = math.settlement.discrepancyCents;
-  const balanced = disc === 0;
+  const balanced = math.pendingCount === 0 && disc === 0;
   const title = detail.session.title?.trim() ? detail.session.title : 'Poker night';
   const results = [...math.rows]
     .filter((r) => r.netCents !== null)
@@ -102,7 +102,9 @@ export const ShareCard = forwardRef<
             <Text style={[s.poolText, { color: balanced ? colors.accent : colors.warn }]}>
               {balanced
                 ? `Pool balanced: ${formatCents(math.totalBuyinCents, symbol)}`
-                : `Off by ${formatCents(Math.abs(disc), symbol)}`}
+                : math.pendingCount > 0
+                  ? `${math.pendingCount} not cashed out`
+                  : `Off by ${formatCents(Math.abs(disc), symbol)}`}
             </Text>
           </View>
         </View>

@@ -15,6 +15,7 @@ export function AmountPad({
   onCancel,
   onDelete,
   extraAction,
+  onDismiss,
 }: {
   visible: boolean;
   title: string;
@@ -25,6 +26,8 @@ export function AmountPad({
   onCancel: () => void;
   onDelete?: () => void;
   extraAction?: { label: string; onPress: () => void };
+  /** iOS-only: fires once the Modal has actually finished dismissing. */
+  onDismiss?: () => void;
 }) {
   const symbol = useSettingsStore((s) => s.settings.currencySymbol);
   const [text, setText] = useState('');
@@ -40,7 +43,7 @@ export function AmountPad({
   };
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onCancel}>
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={onCancel} onDismiss={onDismiss}>
       <Pressable style={s.scrim} onPress={onCancel} accessibilityLabel="Dismiss" />
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <View style={s.sheet}>

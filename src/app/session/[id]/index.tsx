@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, Modal, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -41,10 +41,22 @@ export default function SessionScreen() {
   const [chipFor, setChipFor] = useState<{ spId: string; name: string } | null>(null);
   const denoms = useSettingsStore((s) => s.denoms);
 
+  // Holds a chip-sheet target that's waiting for the AmountPad's Modal to finish
+  // dismissing, so the two Modals never present/dismiss in the same commit (iOS races
+  // when that happens — see AmountPad's cashout "Use chips" extraAction below).
+  const pendingChip = useRef<{ spId: string; name: string } | null>(null);
+  const pendingChipTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   useEffect(() => {
     if (id) store.open(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
+
+  useEffect(() => {
+    return () => {
+      if (pendingChipTimer.current) clearTimeout(pendingChipTimer.current);
+    };
+  }, []);
 
   const detail = store.detail;
   const math = useMemo(() => (detail ? summarize(detail) : null), [detail]);
@@ -244,12 +256,29 @@ export default function SessionScreen() {
                 onPress: () => {
                   if (pad.kind !== 'cashout') return;
                   const target = { spId: pad.spId, name: pad.name };
+                  pendingChip.current = target;
                   closePad();
-                  setChipFor(target);
+                  // Modal.onDismiss is iOS-only; Android has no reliable "fully dismissed"
+                  // signal, so fall back to a fixed delay after the pad starts closing.
+                  if (Platform.OS === 'android') {
+                    pendingChipTimer.current = setTimeout(() => {
+                      if (pendingChip.current) {
+                        setChipFor(pendingChip.current);
+                        pendingChip.current = null;
+                      }
+                      pendingChipTimer.current = null;
+                    }, 300);
+                  }
                 },
               }
             : undefined
         }
+        onDismiss={() => {
+          if (Platform.OS !== 'android' && pendingChip.current) {
+            setChipFor(pendingChip.current);
+            pendingChip.current = null;
+          }
+        }}
         onCancel={closePad}
         onConfirm={(c) => {
           if (pad.kind === 'cashout') safe(() => store.setCashout(pad.spId, c));

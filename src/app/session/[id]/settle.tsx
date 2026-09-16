@@ -84,150 +84,155 @@ export default function SettleScreen() {
   const nightTitle = detail.session.title?.trim() ? detail.session.title : formatDate(detail.session.date);
 
   return (
-    <Screen
-      scroll
-      footer={
-        <>
-          <Button label={sharing ? 'Preparing…' : 'Share image'} onPress={doShare} disabled={sharing} />
-          <Button label="Copy to clipboard" variant="secondary" size="md" onPress={doCopy} style={{ marginTop: space.sm }} />
-        </>
-      }>
-      <NavHeader
-        overline={nightTitle}
-        overlineTone={balanced ? 'accent' : 'dim'}
-        title="Settlements"
-        onBack={() => router.back()}
-        right={
-          <View style={[s.statusDisc, balanced ? s.statusOk : s.statusWarn]}>
-            <Text style={[s.statusGlyph, { color: balanced ? colors.accent : colors.warn }]}>
-              {balanced ? '✓' : '!'}
+    <>
+      <Screen
+        scroll
+        footer={
+          <>
+            <Button label={sharing ? 'Preparing…' : 'Share image'} onPress={doShare} disabled={sharing} />
+            <Button label="Copy to clipboard" variant="secondary" size="md" onPress={doCopy} style={{ marginTop: space.sm }} />
+          </>
+        }>
+        <NavHeader
+          overline={nightTitle}
+          overlineTone={balanced ? 'accent' : 'dim'}
+          title="Settlements"
+          onBack={() => router.back()}
+          right={
+            <View style={[s.statusDisc, balanced ? s.statusOk : s.statusWarn]}>
+              <Text style={[s.statusGlyph, { color: balanced ? colors.accent : colors.warn }]}>
+                {balanced ? '✓' : '!'}
+              </Text>
+            </View>
+          }
+        />
+
+        <Row style={s.totalCard}>
+          <View style={s.coin}>
+            <Text style={s.coinGlyph}>{symbol}</Text>
+          </View>
+          <View style={{ flex: 1, marginLeft: space.md }}>
+            <Overline>Total cash handled</Overline>
+            <Caption tone={balanced ? 'dim' : 'muted'}>
+              {balanced
+                ? 'Balanced pot pool'
+                : disc !== 0
+                  ? `Off by ${formatCents(Math.abs(disc), symbol)}`
+                  : `${math.pendingCount} still to cash out`}
+            </Caption>
+          </View>
+          <MoneyText cents={math.totalBuyinCents} variant="lg" color="accent" />
+        </Row>
+
+        {math.pendingCount > 0 ? (
+          <Banner
+            kind="info"
+            text={`${math.pendingCount} player${math.pendingCount === 1 ? '' : 's'} not cashed out — excluded below`}
+            style={{ marginTop: space.md }}
+          />
+        ) : null}
+        {disc !== 0 ? (
+          <Banner
+            kind="warn"
+            text={`Books off by ${formatCents(Math.abs(disc), symbol)} (${disc > 0 ? 'too much cashed out' : 'cash missing'})`}
+            style={{ marginTop: space.md }}
+          />
+        ) : null}
+
+        <Row style={s.sectionHead}>
+          <Overline>Fewest transfers required</Overline>
+          <View style={{ flex: 1 }} />
+          <View style={s.badge}>
+            <Text style={s.badgeLabel}>
+              {count} transaction{count === 1 ? '' : 's'}
             </Text>
           </View>
-        }
-      />
+        </Row>
 
-      <Row style={s.totalCard}>
-        <View style={s.coin}>
-          <Text style={s.coinGlyph}>{symbol}</Text>
-        </View>
-        <View style={{ flex: 1, marginLeft: space.md }}>
-          <Overline>Total cash handled</Overline>
-          <Caption tone={balanced ? 'dim' : 'muted'}>
-            {balanced
-              ? 'Balanced pot pool'
-              : disc !== 0
-                ? `Off by ${formatCents(Math.abs(disc), symbol)}`
-                : `${math.pendingCount} still to cash out`}
-          </Caption>
-        </View>
-        <MoneyText cents={math.totalBuyinCents} variant="lg" color="accent" />
-      </Row>
+        {count === 0 ? (
+          <Body dim>Nobody owes anything.</Body>
+        ) : (
+          math.settlement.transfers.map((t, i) => (
+            <TransferRow
+              key={`${t.from}-${t.to}-${i}`}
+              fromName={nameOf(t.from)}
+              fromSeed={seedOf(t.from)}
+              toName={nameOf(t.to)}
+              toSeed={seedOf(t.to)}
+              amountCents={t.amountCents}
+            />
+          ))
+        )}
 
-      {math.pendingCount > 0 ? (
-        <Banner
-          kind="info"
-          text={`${math.pendingCount} player${math.pendingCount === 1 ? '' : 's'} not cashed out — excluded below`}
-          style={{ marginTop: space.md }}
-        />
-      ) : null}
-      {disc !== 0 ? (
-        <Banner
-          kind="warn"
-          text={`Books off by ${formatCents(Math.abs(disc), symbol)} (${disc > 0 ? 'too much cashed out' : 'cash missing'})`}
-          style={{ marginTop: space.md }}
-        />
-      ) : null}
-
-      <Row style={s.sectionHead}>
-        <Overline>Fewest transfers required</Overline>
-        <View style={{ flex: 1 }} />
-        <View style={s.badge}>
-          <Text style={s.badgeLabel}>
-            {count} transaction{count === 1 ? '' : 's'}
-          </Text>
-        </View>
-      </Row>
-
-      {count === 0 ? (
-        <Body dim>Nobody owes anything.</Body>
-      ) : (
-        math.settlement.transfers.map((t, i) => (
-          <TransferRow
-            key={`${t.from}-${t.to}-${i}`}
-            fromName={nameOf(t.from)}
-            fromSeed={seedOf(t.from)}
-            toName={nameOf(t.to)}
-            toSeed={seedOf(t.to)}
-            amountCents={t.amountCents}
-          />
-        ))
-      )}
-
-      <Overline style={{ marginTop: space.xl, marginBottom: space.sm }}>Results</Overline>
-      <View style={s.panel}>
-        {results.map((r, i) => (
-          <View key={r.playerId}>
-            {i > 0 ? <Divider /> : null}
-            <Row style={s.resultRow}>
-              <Avatar name={r.name} seed={r.colorSeed} size={28} />
-              <Text style={s.resultName} numberOfLines={1}>
-                {r.name}
-              </Text>
-              <View style={{ flex: 1 }} />
-              <MoneyText cents={r.netCents ?? 0} signed />
-            </Row>
-          </View>
-        ))}
-        {results.length === 0 ? (
-          <Row style={s.resultRow}>
-            <Body dim>No cash-outs entered yet.</Body>
-          </Row>
-        ) : null}
-      </View>
-
-      <Pressable onPress={() => setShowDetails((v) => !v)} style={s.detailsToggle} accessibilityRole="button">
-        <Overline>{showDetails ? 'Details ▾' : 'Details ▸'}</Overline>
-      </Pressable>
-      {showDetails ? (
+        <Overline style={{ marginTop: space.xl, marginBottom: space.sm }}>Results</Overline>
         <View style={s.panel}>
-          <Row style={s.detailRow}>
-            <Caption style={s.colName}>Player</Caption>
-            <Caption style={s.col}>In</Caption>
-            <Caption style={s.col}>Out</Caption>
-            <Caption style={s.col}>Net</Caption>
-          </Row>
-          <Divider />
-          {math.rows.map((r, i) => (
+          {results.map((r, i) => (
             <View key={r.playerId}>
               {i > 0 ? <Divider /> : null}
-              <Row style={s.detailRow}>
-                <Text style={[s.cell, s.colName]} numberOfLines={1}>
+              <Row style={s.resultRow}>
+                <Avatar name={r.name} seed={r.colorSeed} size={28} />
+                <Text style={s.resultName} numberOfLines={1}>
                   {r.name}
                 </Text>
-                <Text style={[s.cell, s.col]}>{formatCents(r.buyinCents, symbol)}</Text>
-                <Text style={[s.cell, s.col]}>
-                  {r.cashoutCents === null ? '—' : formatCents(r.cashoutCents, symbol)}
-                </Text>
-                <Text style={[s.cell, s.col]}>{r.netCents === null ? '—' : formatSigned(r.netCents, symbol)}</Text>
+                <View style={{ flex: 1 }} />
+                <MoneyText cents={r.netCents ?? 0} signed />
               </Row>
             </View>
           ))}
+          {results.length === 0 ? (
+            <Row style={s.resultRow}>
+              <Body dim>No cash-outs entered yet.</Body>
+            </Row>
+          ) : null}
         </View>
-      ) : null}
 
-      <Row style={s.sectionHead}>
-        <Overline>Message card</Overline>
-        <View style={{ flex: 1 }} />
-        <Caption tone="muted">Live preview</Caption>
-      </Row>
-      <View style={[s.preview, { width: previewWidth, height: Math.max(cardHeight * previewScale, 120) }]}>
-        <View
-          pointerEvents="none"
-          style={{ width: SHARE_CARD_WIDTH, transform: [{ scale: previewScale }], transformOrigin: 'top left' }}>
-          <ShareCard detail={detail} math={math} symbol={symbol} />
+        <Pressable onPress={() => setShowDetails((v) => !v)} style={s.detailsToggle} accessibilityRole="button">
+          <Overline>{showDetails ? 'Details ▾' : 'Details ▸'}</Overline>
+        </Pressable>
+        {showDetails ? (
+          <View style={s.panel}>
+            <Row style={s.detailRow}>
+              <Caption style={s.colName}>Player</Caption>
+              <Caption style={s.col}>In</Caption>
+              <Caption style={s.col}>Out</Caption>
+              <Caption style={s.col}>Net</Caption>
+            </Row>
+            <Divider />
+            {math.rows.map((r, i) => (
+              <View key={r.playerId}>
+                {i > 0 ? <Divider /> : null}
+                <Row style={s.detailRow}>
+                  <Text style={[s.cell, s.colName]} numberOfLines={1}>
+                    {r.name}
+                  </Text>
+                  <Text style={[s.cell, s.col]}>{formatCents(r.buyinCents, symbol)}</Text>
+                  <Text style={[s.cell, s.col]}>
+                    {r.cashoutCents === null ? '—' : formatCents(r.cashoutCents, symbol)}
+                  </Text>
+                  <Text style={[s.cell, s.col]}>{r.netCents === null ? '—' : formatSigned(r.netCents, symbol)}</Text>
+                </Row>
+              </View>
+            ))}
+          </View>
+        ) : null}
+
+        <Row style={s.sectionHead}>
+          <Overline>Message card</Overline>
+          <View style={{ flex: 1 }} />
+          <Caption tone="muted">Live preview</Caption>
+        </Row>
+        <View style={[s.preview, { width: previewWidth, height: Math.max(cardHeight * previewScale, 120) }]}>
+          <View
+            pointerEvents="none"
+            style={{ width: SHARE_CARD_WIDTH, transform: [{ scale: previewScale }], transformOrigin: 'top left' }}>
+            <ShareCard detail={detail} math={math} symbol={symbol} />
+          </View>
         </View>
-      </View>
+      </Screen>
 
+      {/* A sibling of Screen's ScrollView (not a clipped child of it), fully opaque but
+          pushed far offscreen: captureRef's iOS useRenderInContext path needs an opaque,
+          on-hierarchy view to reliably produce a non-blank image. */}
       <View style={s.offscreen} pointerEvents="none">
         <ShareCard
           ref={cardRef}
@@ -237,7 +242,7 @@ export default function SettleScreen() {
           onLayout={(e) => setCardHeight(e.nativeEvent.layout.height)}
         />
       </View>
-    </Screen>
+    </>
   );
 }
 
@@ -287,5 +292,5 @@ const s = StyleSheet.create({
   colName: { flex: 2 },
   col: { flex: 1, textAlign: 'right' },
   preview: { overflow: 'hidden', borderRadius: radius.lg, marginBottom: space.md },
-  offscreen: { position: 'absolute', left: -SHARE_CARD_WIDTH * 2, top: 0, opacity: 0 },
+  offscreen: { position: 'absolute', left: -SHARE_CARD_WIDTH * 2, top: 0, opacity: 1 },
 });

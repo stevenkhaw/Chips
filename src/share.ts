@@ -11,7 +11,10 @@ import { formatDate } from '@/date';
 export async function captureAndShare(ref: RefObject<View | null>): Promise<void> {
   if (!ref.current) throw new Error('Nothing to share yet');
   if (!(await Sharing.isAvailableAsync())) throw new Error('Sharing is not available on this device');
-  const uri = await captureRef(ref, { format: 'png', result: 'tmpfile' });
+  // useRenderInContext (iOS-only) avoids the default drawViewHierarchyInRect path, which
+  // react-native-view-shot's own source warns can return a blank image for large or
+  // offscreen views. It is a no-op on Android.
+  const uri = await captureRef(ref, { format: 'png', result: 'tmpfile', useRenderInContext: true });
   await Sharing.shareAsync(uri, { mimeType: 'image/png', dialogTitle: 'Share settlement' });
 }
 
@@ -38,12 +41,19 @@ export function buildShareText(detail: SessionDetail, math: SessionSummaryMath, 
   }
 
   const disc = math.settlement.discrepancyCents;
+  const pending = math.pendingCount;
+  const balanced = pending === 0 && disc === 0;
   lines.push(
     '',
-    disc === 0
+    balanced
       ? `Pool balanced: ${formatCents(math.totalBuyinCents, symbol)}`
-      : `Off by ${formatCents(Math.abs(disc), symbol)} (${disc > 0 ? 'too much cashed out' : 'cash missing'})`,
+      : disc !== 0
+        ? `Off by ${formatCents(Math.abs(disc), symbol)} (${disc > 0 ? 'too much cashed out' : 'cash missing'})`
+        : `${pending} player${pending === 1 ? '' : 's'} not cashed out`,
   );
+  if (pending > 0 && disc !== 0) {
+    lines.push(`${pending} player${pending === 1 ? '' : 's'} not cashed out`);
+  }
   return lines.join('\n');
 }
 
