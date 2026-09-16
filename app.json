@@ -21,10 +21,6 @@
       "predictiveBackGestureEnabled": false,
       "package": "com.stevenkhaw.chips"
     },
-    "web": {
-      "output": "static",
-      "favicon": "./assets/images/favicon.png"
-    },
     "plugins": [
       "expo-router",
       [
@@ -42,6 +38,10 @@
     ],
     "experiments": {
       "reactCompiler": true
-    }
+    },
+    "platforms": [
+      "ios",
+      "android"
+    ]
   }
 }
