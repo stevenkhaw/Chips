@@ -10,8 +10,8 @@ import { formatDate } from '@/date';
 
 export async function captureAndShare(ref: RefObject<View | null>): Promise<void> {
   if (!ref.current) throw new Error('Nothing to share yet');
-  const uri = await captureRef(ref, { format: 'png', quality: 1, result: 'tmpfile' });
   if (!(await Sharing.isAvailableAsync())) throw new Error('Sharing is not available on this device');
+  const uri = await captureRef(ref, { format: 'png', result: 'tmpfile' });
   await Sharing.shareAsync(uri, { mimeType: 'image/png', dialogTitle: 'Share settlement' });
 }
 

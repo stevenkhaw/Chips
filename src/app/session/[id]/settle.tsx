@@ -23,6 +23,7 @@ export default function SettleScreen() {
   const cardRef = useRef<View>(null);
   const [cardHeight, setCardHeight] = useState(0);
   const [sharing, setSharing] = useState(false);
+  const autoShared = useRef(false);
   const { width } = useWindowDimensions();
   const previewWidth = width - space.lg * 2;
   const previewScale = previewWidth / SHARE_CARD_WIDTH;
@@ -56,12 +57,13 @@ export default function SettleScreen() {
   };
 
   useEffect(() => {
-    if (share !== '1' || !math || detail?.session.id !== id) return;
-    // Let the offscreen card lay out before capturing it.
-    const t = setTimeout(doShare, 300);
+    if (autoShared.current || share !== '1' || cardHeight <= 0 || !math || detail?.session.id !== id) return;
+    autoShared.current = true;
+    // The offscreen card has measured a height, but let the frame commit before capturing it.
+    const t = setTimeout(doShare, 50);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [share, math, detail?.session.id, id]);
+  }, [share, cardHeight, math, detail?.session.id, id]);
 
   if (!detail || !math || detail.session.id !== id) {
     return (
