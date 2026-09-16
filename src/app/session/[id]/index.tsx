@@ -8,6 +8,7 @@ import {
 import { BuyinRow } from '@/components/BuyinRow';
 import { CashoutRow } from '@/components/CashoutRow';
 import { AmountPad } from '@/components/AmountPad';
+import { ChipSheet } from '@/components/ChipSheet';
 import { PlayerChecklist } from '@/components/PlayerChecklist';
 import { useSessionsStore } from '@/store/useSessionsStore';
 import { useSettingsStore } from '@/store/useSettingsStore';
@@ -37,6 +38,8 @@ export default function SessionScreen() {
   const [pad, setPad] = useState<PadState>({ kind: 'none' });
   const [addingPlayer, setAddingPlayer] = useState(false);
   const [editingNight, setEditingNight] = useState(false);
+  const [chipFor, setChipFor] = useState<{ spId: string; name: string } | null>(null);
+  const denoms = useSettingsStore((s) => s.denoms);
 
   useEffect(() => {
     if (id) store.open(id);
@@ -234,6 +237,19 @@ export default function SessionScreen() {
         title={pad.kind === 'cashout' ? `Cash-out · ${pad.name}` : 'Cash-out'}
         allowZero
         initialCents={pad.kind === 'cashout' ? pad.current : null}
+        extraAction={
+          denoms.length > 0 && pad.kind === 'cashout'
+            ? {
+                label: 'Use chips',
+                onPress: () => {
+                  if (pad.kind !== 'cashout') return;
+                  const target = { spId: pad.spId, name: pad.name };
+                  closePad();
+                  setChipFor(target);
+                },
+              }
+            : undefined
+        }
         onCancel={closePad}
         onConfirm={(c) => {
           if (pad.kind === 'cashout') safe(() => store.setCashout(pad.spId, c));
@@ -267,6 +283,16 @@ export default function SessionScreen() {
         onSave={(next) => {
           safe(() => store.updateSession({ title: next.title.trim() || null, date: next.date }));
           setEditingNight(false);
+        }}
+      />
+
+      <ChipSheet
+        visible={chipFor !== null}
+        playerName={chipFor?.name ?? ''}
+        onCancel={() => setChipFor(null)}
+        onUse={(cents) => {
+          if (chipFor) safe(() => store.setCashout(chipFor.spId, cents));
+          setChipFor(null);
         }}
       />
     </Screen>
