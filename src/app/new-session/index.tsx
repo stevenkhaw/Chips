@@ -8,7 +8,7 @@ import { useNewNightDraft } from '@/store/useNewNightDraft';
 import { useSettingsStore } from '@/store/useSettingsStore';
 import { formatCents } from '@/domain/money';
 import { formatDate, fromIso, toIso, todayIso } from '@/date';
-import { colors, radius, space, textStyles } from '@/theme';
+import { colors, fonts, radius, space, textStyles } from '@/theme';
 
 const PRESETS = [1000, 2000, 5000];
 
@@ -172,7 +172,13 @@ const s = StyleSheet.create({
     justifyContent: 'center',
   },
   presetActive: { backgroundColor: colors.accent, borderColor: colors.accent },
-  presetLabel: { ...textStyles.labelMd, fontSize: 14, color: colors.text },
+  presetLabel: {
+    ...textStyles.labelMd,
+    fontSize: 14,
+    color: colors.text,
+    fontFamily: fonts.numericMd,
+    fontVariant: ['tabular-nums'],
+  },
   scrim: { flex: 1, backgroundColor: colors.overlay },
   sheet: {
     backgroundColor: colors.card,
