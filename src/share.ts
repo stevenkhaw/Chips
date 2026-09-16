@@ -24,9 +24,18 @@ export function buildShareText(detail: SessionDetail, math: SessionSummaryMath, 
   const title = detail.session.title?.trim() ? detail.session.title : 'Poker night';
   const lines: string[] = [`${title} — ${formatDate(detail.session.date)}`, ''];
 
+  if (math.paidCount > 0) {
+    lines.push('Already paid:');
+    for (const p of detail.payments) {
+      lines.push(`• ${nameOf(p.fromPlayerId)} → ${nameOf(p.toPlayerId)}  ${formatCents(p.amountCents, symbol)}`);
+    }
+    lines.push('');
+  }
+
   if (math.settlement.transfers.length === 0) {
-    lines.push('Nobody owes anything.');
+    lines.push(math.paidCount > 0 ? 'All settled.' : 'Nobody owes anything.');
   } else {
+    lines.push('Still owed:');
     for (const t of math.settlement.transfers) {
       lines.push(`• ${nameOf(t.from)} pays ${nameOf(t.to)}  ${formatCents(t.amountCents, symbol)}`);
     }

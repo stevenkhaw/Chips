@@ -38,8 +38,25 @@ export const ShareCard = forwardRef<
 
         <View style={s.rule} />
 
+        {detail.payments.length > 0 ? (
+          <>
+            <Text style={s.sectionLabel}>ALREADY PAID</Text>
+            {detail.payments.map((p) => (
+              <View key={p.id} style={s.transfer}>
+                <View style={[s.dot, { backgroundColor: avatarColor(seedOf(p.fromPlayerId)) }]} />
+                <Text style={s.transferText} numberOfLines={1}>
+                  {nameOf(p.fromPlayerId)} → {nameOf(p.toPlayerId)}
+                </Text>
+                <View style={s.spacer} />
+                <Text style={s.transferAmount}>{formatCents(p.amountCents, symbol)}</Text>
+              </View>
+            ))}
+          </>
+        ) : null}
+
+        <Text style={s.sectionLabel}>STILL OWED</Text>
         {math.settlement.transfers.length === 0 ? (
-          <Text style={s.empty}>Nobody owes anything.</Text>
+          <Text style={s.empty}>{math.paidCount > 0 ? 'All settled' : 'Nobody owes anything.'}</Text>
         ) : (
           math.settlement.transfers.map((t, i) => (
             <View key={`${t.from}-${t.to}-${i}`} style={s.transfer}>

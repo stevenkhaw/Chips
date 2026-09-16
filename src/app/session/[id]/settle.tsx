@@ -4,6 +4,8 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Avatar, Banner, Body, Button, Caption, Divider, NavHeader, Overline, Row, Screen, toastError } from '@/components/ui';
 import { MoneyText } from '@/components/MoneyText';
 import { TransferRow } from '@/components/TransferRow';
+import { PaymentRow } from '@/components/PaymentRow';
+import { PaymentSheet } from '@/components/PaymentSheet';
 import { ShareCard, SHARE_CARD_WIDTH } from '@/components/ShareCard';
 import { buildShareText, captureAndShare, copyToClipboard } from '@/share';
 import { useSessionsStore } from '@/store/useSessionsStore';
@@ -18,8 +20,11 @@ export default function SettleScreen() {
   const router = useRouter();
   const detail = useSessionsStore((s) => s.detail);
   const open = useSessionsStore((s) => s.open);
+  const addPayment = useSessionsStore((s) => s.addPayment);
+  const removePayment = useSessionsStore((s) => s.removePayment);
   const symbol = useSettingsStore((s) => s.settings.currencySymbol);
   const [showDetails, setShowDetails] = useState(false);
+  const [paymentSheetVisible, setPaymentSheetVisible] = useState(false);
   const cardRef = useRef<View>(null);
   const [cardHeight, setCardHeight] = useState(0);
   const [sharing, setSharing] = useState(false);
@@ -51,6 +56,31 @@ export default function SettleScreen() {
     try {
       await copyToClipboard(buildShareText(detail, math, symbol));
       Alert.alert('Copied', 'Settlement text copied to the clipboard.');
+    } catch (e) {
+      toastError(e);
+    }
+  };
+
+  const markPaid = (t: { from: string; to: string; amountCents: number }) => {
+    try {
+      addPayment({ fromPlayerId: t.from, toPlayerId: t.to, amountCents: t.amountCents });
+    } catch (e) {
+      toastError(e);
+    }
+  };
+
+  const removePaymentSafe = (paymentId: string) => {
+    try {
+      removePayment(paymentId);
+    } catch (e) {
+      toastError(e);
+    }
+  };
+
+  const savePayment = (input: { fromPlayerId: string; toPlayerId: string; amountCents: number; note: string | null }) => {
+    try {
+      addPayment(input);
+      setPaymentSheetVisible(false);
     } catch (e) {
       toastError(e);
     }
@@ -139,18 +169,46 @@ export default function SettleScreen() {
           />
         ) : null}
 
+        {detail.payments.length > 0 ? (
+          <>
+            <Row style={s.sectionHead}>
+              <Overline>Already paid</Overline>
+            </Row>
+            {detail.payments.map((p) => (
+              <PaymentRow
+                key={p.id}
+                fromName={nameOf(p.fromPlayerId)}
+                fromSeed={seedOf(p.fromPlayerId)}
+                toName={nameOf(p.toPlayerId)}
+                toSeed={seedOf(p.toPlayerId)}
+                amountCents={p.amountCents}
+                note={p.note}
+                onDelete={() => removePaymentSafe(p.id)}
+              />
+            ))}
+          </>
+        ) : null}
+
+        <Button
+          label="+ Log a payment"
+          variant="secondary"
+          size="md"
+          onPress={() => setPaymentSheetVisible(true)}
+          style={{ marginTop: space.md }}
+        />
+
         <Row style={s.sectionHead}>
-          <Overline>Fewest transfers required</Overline>
+          <Overline>Still owed</Overline>
           <View style={{ flex: 1 }} />
           <View style={s.badge}>
             <Text style={s.badgeLabel}>
-              {count} transaction{count === 1 ? '' : 's'}
+              {count} left{math.paidCount > 0 ? ` · ${math.paidCount} paid` : ''}
             </Text>
           </View>
         </Row>
 
         {count === 0 ? (
-          <Body dim>Nobody owes anything.</Body>
+          <Body dim>{math.paidCount > 0 ? 'All settled ✓' : 'Nobody owes anything.'}</Body>
         ) : (
           math.settlement.transfers.map((t, i) => (
             <TransferRow
@@ -160,6 +218,7 @@ export default function SettleScreen() {
               toName={nameOf(t.to)}
               toSeed={seedOf(t.to)}
               amountCents={t.amountCents}
+              onMarkPaid={() => markPaid(t)}
             />
           ))
         )}
@@ -242,6 +301,13 @@ export default function SettleScreen() {
           onLayout={(e) => setCardHeight(e.nativeEvent.layout.height)}
         />
       </View>
+
+      <PaymentSheet
+        visible={paymentSheetVisible}
+        players={detail.players.map((p) => p.player)}
+        onSave={savePayment}
+        onCancel={() => setPaymentSheetVisible(false)}
+      />
     </>
   );
 }

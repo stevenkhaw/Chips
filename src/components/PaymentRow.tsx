@@ -1,33 +1,46 @@
 import React from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { Avatar, Row } from '@/components/ui';
+import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Avatar, Caption, Row } from '@/components/ui';
 import { MoneyText } from '@/components/MoneyText';
 import { colors, radius, space, TAP, textStyles } from '@/theme';
 
-export function TransferRow({
+export function PaymentRow({
   fromName,
   fromSeed,
   toName,
   toSeed,
   amountCents,
-  onMarkPaid,
+  note,
+  onDelete,
 }: {
   fromName: string;
   fromSeed: number;
   toName: string;
   toSeed: number;
   amountCents: number;
-  onMarkPaid?: () => void;
+  note?: string | null;
+  onDelete: () => void;
 }) {
+  const confirmDelete = () => {
+    Alert.alert('Delete payment?', undefined, [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Delete', style: 'destructive', onPress: onDelete },
+    ]);
+  };
+
   return (
-    <View style={s.card} accessibilityLabel={`${fromName} pays ${toName}`}>
+    <Pressable
+      onLongPress={confirmDelete}
+      accessibilityRole="button"
+      accessibilityLabel={`${fromName} paid ${toName}. Long-press to delete`}
+      style={({ pressed }) => [s.card, pressed && { backgroundColor: colors.cardAlt }]}>
       <Row>
         <Avatar name={fromName} seed={fromSeed} size={28} />
         <Text style={s.name} numberOfLines={1}>
           {fromName}
         </Text>
-        <View style={s.pays}>
-          <Text style={s.paysLabel}>pays →</Text>
+        <View style={s.arrowWrap}>
+          <Text style={s.arrow}>→</Text>
         </View>
         <Avatar name={toName} seed={toSeed} size={28} />
         <Text style={s.name} numberOfLines={1}>
@@ -36,16 +49,12 @@ export function TransferRow({
         <View style={{ flex: 1 }} />
         <MoneyText cents={amountCents} color="accent" />
       </Row>
-      {onMarkPaid ? (
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={`Mark ${fromName} paid ${toName}`}
-          onPress={onMarkPaid}
-          style={({ pressed }) => [s.markPaid, pressed && { opacity: 0.7 }]}>
-          <Text style={s.markPaidLabel}>Mark paid</Text>
-        </Pressable>
+      {note ? (
+        <Caption tone="muted" style={s.note} numberOfLines={1}>
+          {note}
+        </Caption>
       ) : null}
-    </View>
+    </Pressable>
   );
 }
 
@@ -57,26 +66,16 @@ const s = StyleSheet.create({
     borderColor: colors.border,
     padding: space.md,
     marginBottom: space.sm,
+    minHeight: TAP,
   },
   name: { ...textStyles.labelMd, fontSize: 14, color: colors.text, marginLeft: space.sm, flexShrink: 1 },
-  pays: {
+  arrowWrap: {
     marginHorizontal: space.sm,
     paddingHorizontal: space.sm,
     paddingVertical: 2,
     borderRadius: radius.sm,
     backgroundColor: colors.cardAlt,
   },
-  paysLabel: { ...textStyles.bodySm, color: colors.textDim },
-  markPaid: {
-    alignSelf: 'flex-end',
-    minHeight: TAP,
-    justifyContent: 'center',
-    paddingHorizontal: space.md,
-    marginTop: space.sm,
-    borderRadius: radius.pill,
-    backgroundColor: colors.accentSoft,
-    borderWidth: 1,
-    borderColor: colors.accentBorder,
-  },
-  markPaidLabel: { ...textStyles.labelCaps, color: colors.accent },
+  arrow: { ...textStyles.bodySm, color: colors.textDim },
+  note: { marginTop: space.xs, marginLeft: space.xs },
 });

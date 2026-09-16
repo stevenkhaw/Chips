@@ -19,6 +19,8 @@ interface SessionsState {
   addBuyin(sessionPlayerId: string, cents: number): void;
   updateBuyin(buyinId: string, cents: number): void;
   removeBuyin(buyinId: string): void;
+  addPayment(input: { fromPlayerId: string; toPlayerId: string; amountCents: number; note?: string | null }): void;
+  removePayment(paymentId: string): void;
   lastPlayerIds(): string[];
 }
 
@@ -78,6 +80,14 @@ export const useSessionsStore = create<SessionsState>((set, get) => {
     },
     removeBuyin: (id) => {
       repo.removeBuyin(getDb(), id);
+      refreshDetail();
+    },
+    addPayment: (input) => {
+      repo.addPayment(getDb(), requireId(), input);
+      refreshDetail();
+    },
+    removePayment: (id) => {
+      repo.removePayment(getDb(), id);
       refreshDetail();
     },
     lastPlayerIds: () => repo.lastSessionPlayerIds(getDb()),

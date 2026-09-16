@@ -49,9 +49,19 @@ export interface SessionPlayerDetail {
   buyins: Buyin[];
 }
 
+export interface Payment extends BaseRow {
+  sessionId: string;
+  fromPlayerId: string;
+  toPlayerId: string;
+  amountCents: number;
+  note: string | null;
+  at: number;
+}
+
 export interface SessionDetail {
   session: Session;
   players: SessionPlayerDetail[];
+  payments: Payment[];
 }
 
 export interface SessionSummary {

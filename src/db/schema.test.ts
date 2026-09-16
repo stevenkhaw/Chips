@@ -7,7 +7,9 @@ describe('migrate', () => {
     const tables = db
       .all<{ name: string }>("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name")
       .map((r) => r.name);
-    expect(tables).toEqual(expect.arrayContaining(['players', 'sessions', 'session_players', 'buyins', 'chip_denoms', 'settings']));
+    expect(tables).toEqual(
+      expect.arrayContaining(['players', 'sessions', 'session_players', 'buyins', 'chip_denoms', 'settings', 'payments']),
+    );
     expect(db.first<{ user_version: number }>('PRAGMA user_version')?.user_version).toBe(MIGRATIONS.length);
   });
 

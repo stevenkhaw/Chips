@@ -46,6 +46,19 @@ export const MIGRATIONS: string[] = [
   );
   INSERT OR IGNORE INTO settings (id, default_buyin_cents, currency_symbol) VALUES ('default', 2000, '$');
   `,
+  // v2
+  `
+  CREATE TABLE IF NOT EXISTS payments (
+    id TEXT PRIMARY KEY NOT NULL, created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL, deleted_at INTEGER,
+    session_id TEXT NOT NULL REFERENCES sessions(id),
+    from_player_id TEXT NOT NULL REFERENCES players(id),
+    to_player_id TEXT NOT NULL REFERENCES players(id),
+    amount_cents INTEGER NOT NULL,
+    note TEXT,
+    at INTEGER NOT NULL
+  );
+  CREATE INDEX IF NOT EXISTS idx_payments_session ON payments(session_id);
+  `,
 ];
 
 export function migrate(db: Db): void {

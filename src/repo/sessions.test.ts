@@ -3,6 +3,7 @@ import { createPlayer } from './players';
 import {
   createSession, updateSession, deleteSession, listSessionSummaries, getSessionDetail,
   addPlayerToSession, removePlayerFromSession, setCashout, addBuyin, updateBuyin, removeBuyin, lastSessionPlayerIds,
+  addPayment, removePayment,
 } from './sessions';
 
 function setup() {
@@ -99,6 +100,30 @@ describe('sessions repo', () => {
     expect(getSessionDetail(db, s.id)).toBeNull();
     expect(listSessionSummaries(db)).toEqual([]);
     expect(db.first('SELECT deleted_at FROM buyins WHERE session_player_id = ?', [sp.id])).toEqual({ deleted_at: expect.any(Number) });
+  });
+
+  it('payments: add, list order, validation, remove, deleteSession cascades', () => {
+    const { db, ann, bob } = setup();
+    const s = createSession(db, { date: '2026-09-16', title: null, defaultBuyinCents: 2000, playerIds: [ann.id, bob.id] });
+
+    expect(() => addPayment(db, s.id, { fromPlayerId: bob.id, toPlayerId: ann.id, amountCents: 0 })).toThrow('Amount must be positive');
+    expect(() => addPayment(db, s.id, { fromPlayerId: bob.id, toPlayerId: ann.id, amountCents: 1.5 })).toThrow('Amount must be positive');
+    expect(() => addPayment(db, s.id, { fromPlayerId: ann.id, toPlayerId: ann.id, amountCents: 500 })).toThrow('Payer and payee must differ');
+
+    const p1 = addPayment(db, s.id, { fromPlayerId: bob.id, toPlayerId: ann.id, amountCents: 1000, note: 'Venmo' });
+    const p2 = addPayment(db, s.id, { fromPlayerId: ann.id, toPlayerId: bob.id, amountCents: 500 });
+    expect(p1.note).toBe('Venmo');
+    expect(p2.note).toBeNull();
+
+    const d = getSessionDetail(db, s.id)!;
+    expect(d.payments.map((p) => p.id)).toEqual([p1.id, p2.id]);
+
+    removePayment(db, p1.id);
+    const d2 = getSessionDetail(db, s.id)!;
+    expect(d2.payments.map((p) => p.id)).toEqual([p2.id]);
+
+    deleteSession(db, s.id);
+    expect(db.first('SELECT deleted_at FROM payments WHERE id = ?', [p2.id])).toEqual({ deleted_at: expect.any(Number) });
   });
 
   it('lastSessionPlayerIds returns most recent session players', () => {

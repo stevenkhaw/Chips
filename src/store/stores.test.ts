@@ -79,4 +79,18 @@ describe('useSessionsStore', () => {
     useSessionsStore.getState().create({ date: '2026-09-16', title: null, defaultBuyinCents: 2000, playerIds: [ann.id] });
     expect(useSessionsStore.getState().lastPlayerIds()).toEqual([ann.id]);
   });
+
+  it('addPayment → detail.payments length 1 → removePayment → 0', () => {
+    const ann = usePlayersStore.getState().add('Ann');
+    const bob = usePlayersStore.getState().add('Bob');
+    const s = useSessionsStore.getState().create({ date: '2026-09-16', title: null, defaultBuyinCents: 2000, playerIds: [ann.id, bob.id] });
+    useSessionsStore.getState().open(s.id);
+
+    useSessionsStore.getState().addPayment({ fromPlayerId: bob.id, toPlayerId: ann.id, amountCents: 500 });
+    expect(useSessionsStore.getState().detail!.payments).toHaveLength(1);
+
+    const paymentId = useSessionsStore.getState().detail!.payments[0].id;
+    useSessionsStore.getState().removePayment(paymentId);
+    expect(useSessionsStore.getState().detail!.payments).toHaveLength(0);
+  });
 });

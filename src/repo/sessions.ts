@@ -2,12 +2,13 @@ import type { Db } from '@/db/types';
 import { newId, now } from '@/db/ids';
 import { mapRow } from '@/db/map';
 import { computeRows } from '@/domain/nets';
-import type { Buyin, Player, Session, SessionDetail, SessionPlayer, SessionSummary } from '@/domain/types';
+import type { Buyin, Payment, Player, Session, SessionDetail, SessionPlayer, SessionSummary } from '@/domain/types';
 
 const S_COLS = 'id, created_at, updated_at, deleted_at, date, title, default_buyin_cents, notes';
 const SP_COLS = 'id, created_at, updated_at, deleted_at, session_id, player_id, cashout_cents, sort_order';
 const B_COLS = 'id, created_at, updated_at, deleted_at, session_player_id, amount_cents, at';
 const P_COLS = 'id, created_at, updated_at, deleted_at, name, color_seed, archived';
+const PAY_COLS = 'id, created_at, updated_at, deleted_at, session_id, from_player_id, to_player_id, amount_cents, note, at';
 
 export interface CreateSessionInput {
   date: string;
@@ -64,6 +65,7 @@ export function deleteSession(db: Db, id: string): void {
       [t, t, id],
     );
     db.run('UPDATE session_players SET deleted_at = ?, updated_at = ? WHERE deleted_at IS NULL AND session_id = ?', [t, t, id]);
+    db.run('UPDATE payments SET deleted_at = ?, updated_at = ? WHERE deleted_at IS NULL AND session_id = ?', [t, t, id]);
     db.run('UPDATE sessions SET deleted_at = ?, updated_at = ? WHERE id = ? AND deleted_at IS NULL', [t, t, id]);
   });
 }
@@ -84,7 +86,10 @@ export function getSessionDetail(db: Db, id: string): SessionDetail | null {
       .map((r) => mapRow<Buyin>(r));
     return { sp, player, buyins };
   });
-  return { session, players };
+  const payments = db
+    .all<Record<string, unknown>>(`SELECT ${PAY_COLS} FROM payments WHERE session_id = ? AND deleted_at IS NULL ORDER BY at ASC, created_at ASC`, [id])
+    .map((r) => mapRow<Payment>(r));
+  return { session, players, payments };
 }
 
 export function listSessionSummaries(db: Db): SessionSummary[] {
@@ -148,6 +153,31 @@ export function updateBuyin(db: Db, buyinId: string, amountCents: number): void 
 export function removeBuyin(db: Db, buyinId: string): void {
   const t = now();
   db.run('UPDATE buyins SET deleted_at = ?, updated_at = ? WHERE id = ? AND deleted_at IS NULL', [t, t, buyinId]);
+}
+
+export function addPayment(
+  db: Db,
+  sessionId: string,
+  input: { fromPlayerId: string; toPlayerId: string; amountCents: number; note?: string | null },
+): Payment {
+  if (!Number.isInteger(input.amountCents) || input.amountCents <= 0) throw new Error('Amount must be positive');
+  if (input.fromPlayerId === input.toPlayerId) throw new Error('Payer and payee must differ');
+  const id = newId();
+  const t = now();
+  const note = input.note ?? null;
+  db.run(
+    'INSERT INTO payments (id, created_at, updated_at, deleted_at, session_id, from_player_id, to_player_id, amount_cents, note, at) VALUES (?, ?, ?, NULL, ?, ?, ?, ?, ?, ?)',
+    [id, t, t, sessionId, input.fromPlayerId, input.toPlayerId, input.amountCents, note, t],
+  );
+  return {
+    id, createdAt: t, updatedAt: t, deletedAt: null,
+    sessionId, fromPlayerId: input.fromPlayerId, toPlayerId: input.toPlayerId, amountCents: input.amountCents, note, at: t,
+  };
+}
+
+export function removePayment(db: Db, paymentId: string): void {
+  const t = now();
+  db.run('UPDATE payments SET deleted_at = ?, updated_at = ? WHERE id = ? AND deleted_at IS NULL', [t, t, paymentId]);
 }
 
 export function lastSessionPlayerIds(db: Db): string[] {
