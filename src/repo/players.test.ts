@@ -64,4 +64,15 @@ describe('players repo', () => {
     expect(playerSessionCount(db, p.id)).toBe(1);
     expect(() => deletePlayer(db, p.id)).toThrow('Player has sessions');
   });
+
+  it('rename and archive throw for unknown or deleted ids', () => {
+    const db = createTestDb();
+    const p = createPlayer(db, 'Amy');
+    deletePlayer(db, p.id);
+    expect(() => renamePlayer(db, p.id, 'Amelia')).toThrow('Player not found');
+    expect(() => setPlayerArchived(db, p.id, true)).toThrow('Player not found');
+    expect(() => renamePlayer(db, 'nope', 'X')).toThrow('Player not found');
+    // the soft-deleted row was not mutated
+    expect(db.first<{ name: string; archived: number }>('SELECT name, archived FROM players WHERE id = ?', [p.id])).toEqual({ name: 'Amy', archived: 0 });
+  });
 });

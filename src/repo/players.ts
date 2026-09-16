@@ -47,11 +47,13 @@ export function createPlayer(db: Db, name: string): Player {
 
 export function renamePlayer(db: Db, id: string, name: string): void {
   const clean = normalizeName(db, name, id);
-  db.run('UPDATE players SET name = ?, updated_at = ? WHERE id = ?', [clean, now(), id]);
+  const r = db.run('UPDATE players SET name = ?, updated_at = ? WHERE id = ? AND deleted_at IS NULL', [clean, now(), id]);
+  if (r.changes === 0) throw new Error('Player not found');
 }
 
 export function setPlayerArchived(db: Db, id: string, archived: boolean): void {
-  db.run('UPDATE players SET archived = ?, updated_at = ? WHERE id = ?', [archived ? 1 : 0, now(), id]);
+  const r = db.run('UPDATE players SET archived = ?, updated_at = ? WHERE id = ? AND deleted_at IS NULL', [archived ? 1 : 0, now(), id]);
+  if (r.changes === 0) throw new Error('Player not found');
 }
 
 export function playerSessionCount(db: Db, id: string): number {
@@ -65,5 +67,5 @@ export function playerSessionCount(db: Db, id: string): number {
 export function deletePlayer(db: Db, id: string): void {
   if (playerSessionCount(db, id) > 0) throw new Error('Player has sessions');
   const t = now();
-  db.run('UPDATE players SET deleted_at = ?, updated_at = ? WHERE id = ?', [t, t, id]);
+  db.run('UPDATE players SET deleted_at = ?, updated_at = ? WHERE id = ? AND deleted_at IS NULL', [t, t, id]);
 }
