@@ -8,9 +8,9 @@ import { useSessionsStore } from '@/store/useSessionsStore';
 import { EVEN_COLOR } from '@/domain/playerColor';
 import { colors, fonts, space } from '@/theme';
 
-const HEIGHT = 220;
-const PAD = { top: 14, right: 64, bottom: 26, left: 8 };
-const LABEL_GAP = 12;
+const BASE_HEIGHT = 220;
+const BASE_PAD = { top: 14, right: 64, bottom: 26, left: 8 };
+const BASE_LABEL_GAP = 12;
 
 /** Axis money: "+$1.2k" / "-$40" / "$0". */
 function compactMoney(cents: number, symbol: string): string {
@@ -32,12 +32,36 @@ function shortDate(iso: string): string {
   return fromIso(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 }
 
-export function BalanceChart({ history, symbol }: { history: History; symbol: string }) {
+/**
+ * `scale` multiplies every pixel dimension (height, padding, fonts, strokes) so the
+ * same chart renders crisply inside a 1080px share card. `legend` hides the legend
+ * and hint text when the surrounding card already explains them.
+ */
+export function BalanceChart({
+  history,
+  symbol,
+  scale = 1,
+  legend = true,
+}: {
+  history: History;
+  symbol: string;
+  scale?: number;
+  legend?: boolean;
+}) {
   const [width, setWidth] = useState(0);
   const { nights, players } = history;
   const playerColorMap = useSessionsStore((s) => s.playerColors);
   const colorOf = (pid: string) => playerColorMap[pid] ?? EVEN_COLOR;
   const n = nights.length;
+  const HEIGHT = BASE_HEIGHT * scale;
+  const PAD = {
+    top: BASE_PAD.top * scale,
+    right: BASE_PAD.right * scale,
+    bottom: BASE_PAD.bottom * scale,
+    left: BASE_PAD.left * scale,
+  };
+  const LABEL_GAP = BASE_LABEL_GAP * scale;
+  const font = 10 * scale;
 
   const plotW = Math.max(width - PAD.left - PAD.right, 0);
   const plotH = HEIGHT - PAD.top - PAD.bottom;
@@ -89,14 +113,14 @@ export function BalanceChart({ history, symbol }: { history: History; symbol: st
                 y1={y(v)}
                 y2={y(v)}
                 stroke={v === 0 ? colors.textMuted : colors.border}
-                strokeWidth={1}
-                strokeDasharray={v === 0 ? '4 4' : undefined}
+                strokeWidth={1 * scale}
+                strokeDasharray={v === 0 ? `${4 * scale} ${4 * scale}` : undefined}
               />
               <SvgText
-                x={PAD.left + plotW + 6}
-                y={y(v) + 3.5}
+                x={PAD.left + plotW + 6 * scale}
+                y={y(v) + 3.5 * scale}
                 fill={colors.textMuted}
-                fontSize={10}
+                fontSize={font}
                 fontFamily={fonts.bodySemi}>
                 {compactMoney(v, symbol)}
               </SvgText>
@@ -106,9 +130,9 @@ export function BalanceChart({ history, symbol }: { history: History; symbol: st
             <SvgText
               key={nights[i].session.id}
               x={x(i)}
-              y={HEIGHT - 8}
+              y={HEIGHT - 8 * scale}
               fill={colors.textMuted}
-              fontSize={10}
+              fontSize={font}
               fontFamily={fonts.bodySemi}
               textAnchor={i === n - 1 ? 'end' : 'middle'}>
               {shortDate(nights[i].session.date)}
@@ -120,22 +144,22 @@ export function BalanceChart({ history, symbol }: { history: History; symbol: st
                 points={s.pts.map((p) => `${p.x},${p.y}`).join(' ')}
                 fill="none"
                 stroke={s.color}
-                strokeWidth={2}
+                strokeWidth={2 * scale}
                 strokeLinejoin="round"
                 strokeLinecap="round"
               />
               {s.pts.slice(1).map((p, i) => (
-                <Circle key={i} cx={p.x} cy={p.y} r={3.5} fill={s.color} stroke={colors.card} strokeWidth={2} />
+                <Circle key={i} cx={p.x} cy={p.y} r={3.5 * scale} fill={s.color} stroke={colors.card} strokeWidth={2 * scale} />
               ))}
             </G>
           ))}
           {labels.map((l) => (
             <SvgText
               key={l.key}
-              x={PAD.left + plotW + 6}
-              y={l.y + 3.5}
+              x={PAD.left + plotW + 6 * scale}
+              y={l.y + 3.5 * scale}
               fill={colors.textDim}
-              fontSize={10}
+              fontSize={font}
               fontFamily={fonts.bodyBold}>
               {l.name}
             </SvgText>
@@ -144,15 +168,19 @@ export function BalanceChart({ history, symbol }: { history: History; symbol: st
       ) : (
         <View style={{ height: HEIGHT }} />
       )}
-      <Row style={s.legend}>
-        {players.map((p) => (
-          <Row key={p.playerId} style={s.legendItem}>
-            <View style={[s.dot, { backgroundColor: colorOf(p.playerId) }]} />
-            <Caption>{p.name}</Caption>
+      {legend ? (
+        <>
+          <Row style={s.legend}>
+            {players.map((p) => (
+              <Row key={p.playerId} style={s.legendItem}>
+                <View style={[s.dot, { backgroundColor: colorOf(p.playerId) }]} />
+                <Caption>{p.name}</Caption>
+              </Row>
+            ))}
           </Row>
-        ))}
-      </Row>
-      <Text style={s.hint}>Running total after each night. Lines pause while a cash-out is pending.</Text>
+          <Text style={s.hint}>Running total after each night. Lines pause while a cash-out is pending.</Text>
+        </>
+      ) : null}
     </View>
   );
 }
