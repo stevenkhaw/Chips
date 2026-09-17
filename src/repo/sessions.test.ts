@@ -1,7 +1,7 @@
 import { createTestDb } from '../../test/nodeDb';
 import { createPlayer } from './players';
 import {
-  createSession, updateSession, deleteSession, listSessionSummaries, getSessionDetail,
+  createSession, updateSession, deleteSession, listSessionSummaries, listSessionDetails, getSessionDetail,
   addPlayerToSession, removePlayerFromSession, setCashout, addBuyin, updateBuyin, removeBuyin, lastSessionPlayerIds,
   addPayment, removePayment,
 } from './sessions';
@@ -132,5 +132,22 @@ describe('sessions repo', () => {
     createSession(db, { date: '2026-09-01', title: null, defaultBuyinCents: 2000, playerIds: [ann.id] });
     createSession(db, { date: '2026-09-16', title: null, defaultBuyinCents: 2000, playerIds: [bob.id, ann.id] });
     expect(lastSessionPlayerIds(db)).toEqual([bob.id, ann.id]);
+  });
+
+  it('listSessionDetails returns non-deleted sessions oldest first with full detail', () => {
+    const { db, ann, bob } = setup();
+    const late = createSession(db, { date: '2026-09-20', title: null, defaultBuyinCents: 2000, playerIds: [ann.id] });
+    const early = createSession(db, { date: '2026-09-01', title: null, defaultBuyinCents: 2000, playerIds: [ann.id, bob.id] });
+    const gone = createSession(db, { date: '2026-09-10', title: null, defaultBuyinCents: 2000, playerIds: [bob.id] });
+    deleteSession(db, gone.id);
+    const sp = getSessionDetail(db, early.id)!.players[0].sp.id;
+    addBuyin(db, sp, 2000);
+    setCashout(db, sp, 3500);
+
+    const all = listSessionDetails(db);
+    expect(all.map((d) => d.session.id)).toEqual([early.id, late.id]);
+    expect(all[0].players.map((p) => p.player.name)).toEqual(['Ann', 'Bob']);
+    expect(all[0].players[0].buyins.map((b) => b.amountCents)).toEqual([2000]);
+    expect(all[0].players[0].sp.cashoutCents).toBe(3500);
   });
 });

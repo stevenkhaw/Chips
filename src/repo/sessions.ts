@@ -92,6 +92,14 @@ export function getSessionDetail(db: Db, id: string): SessionDetail | null {
   return { session, players, payments };
 }
 
+/** Every non-deleted session with full detail, oldest first (history/graphs). */
+export function listSessionDetails(db: Db): SessionDetail[] {
+  return db
+    .all<Record<string, unknown>>(`SELECT ${S_COLS} FROM sessions WHERE deleted_at IS NULL ORDER BY date ASC, created_at ASC`)
+    .map((r) => mapRow<Session>(r))
+    .map((session) => getSessionDetail(db, session.id)!);
+}
+
 export function listSessionSummaries(db: Db): SessionSummary[] {
   const sessions = db
     .all<Record<string, unknown>>(`SELECT ${S_COLS} FROM sessions WHERE deleted_at IS NULL ORDER BY date DESC, created_at DESC`)
