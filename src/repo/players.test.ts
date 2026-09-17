@@ -1,6 +1,6 @@
 import { createTestDb } from '../../test/nodeDb';
 import {
-  createPlayer, listPlayers, getPlayer, renamePlayer, setPlayerArchived, deletePlayer, playerSessionCount,
+  createPlayer, listPlayers, getPlayer, renamePlayer, setPlayerArchived, setPlayerColor, deletePlayer, playerSessionCount,
 } from './players';
 
 describe('players repo', () => {
@@ -74,5 +74,17 @@ describe('players repo', () => {
     expect(() => renamePlayer(db, 'nope', 'X')).toThrow('Player not found');
     // the soft-deleted row was not mutated
     expect(db.first<{ name: string; archived: number }>('SELECT name, archived FROM players WHERE id = ?', [p.id])).toEqual({ name: 'Amy', archived: 0 });
+  });
+
+  it('setPlayerColor stores the palette index and rejects bad input', () => {
+    const db = createTestDb();
+    const p = createPlayer(db, 'Amy');
+    setPlayerColor(db, p.id, 5);
+    expect(getPlayer(db, p.id)!.colorSeed).toBe(5);
+    expect(() => setPlayerColor(db, p.id, -1)).toThrow('Invalid colour');
+    expect(() => setPlayerColor(db, p.id, 1.5)).toThrow('Invalid colour');
+    expect(() => setPlayerColor(db, 'nope', 2)).toThrow('Player not found');
+    deletePlayer(db, p.id);
+    expect(() => setPlayerColor(db, p.id, 2)).toThrow('Player not found');
   });
 });

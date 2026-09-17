@@ -56,6 +56,13 @@ export function setPlayerArchived(db: Db, id: string, archived: boolean): void {
   if (r.changes === 0) throw new Error('Player not found');
 }
 
+/** Persist a chosen avatar colour as its palette index (see `avatarColor`). */
+export function setPlayerColor(db: Db, id: string, seed: number): void {
+  if (!Number.isInteger(seed) || seed < 0) throw new Error('Invalid colour');
+  const r = db.run('UPDATE players SET color_seed = ?, updated_at = ? WHERE id = ? AND deleted_at IS NULL', [seed, now(), id]);
+  if (r.changes === 0) throw new Error('Player not found');
+}
+
 export function playerSessionCount(db: Db, id: string): number {
   const r = db.first<{ c: number }>(
     'SELECT COUNT(*) AS c FROM session_players WHERE player_id = ? AND deleted_at IS NULL',

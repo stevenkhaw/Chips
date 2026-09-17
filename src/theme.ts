@@ -99,7 +99,8 @@ export const CHIP_SWATCHES = [
   '#6B7280',
 ];
 
-const AVATAR_PALETTE = ['#FF7A00', '#10B981', '#3B82F6', '#F59E0B', '#A855F7', '#F43F5E', '#14B8A6', '#E879F9'];
+/** Avatar colours; a player's `colorSeed` indexes into this (mod length). */
+export const AVATAR_PALETTE = ['#FF7A00', '#10B981', '#3B82F6', '#F59E0B', '#A855F7', '#F43F5E', '#14B8A6', '#E879F9'];
 
 export function avatarColor(seed: number): string {
   return AVATAR_PALETTE[Math.abs(seed) % AVATAR_PALETTE.length];
