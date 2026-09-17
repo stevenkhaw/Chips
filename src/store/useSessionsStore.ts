@@ -22,6 +22,8 @@ interface SessionsState {
   addPayment(input: { fromPlayerId: string; toPlayerId: string; amountCents: number; note?: string | null }): void;
   removePayment(paymentId: string): void;
   lastPlayerIds(): string[];
+  /** Every session with full detail, oldest first. Read-only; recompute when `summaries` changes. */
+  listDetails(): SessionDetail[];
 }
 
 export const useSessionsStore = create<SessionsState>((set, get) => {
@@ -90,6 +92,7 @@ export const useSessionsStore = create<SessionsState>((set, get) => {
       repo.removePayment(getDb(), id);
       refreshDetail();
     },
+    listDetails: () => repo.listSessionDetails(getDb()),
     lastPlayerIds: () => repo.lastSessionPlayerIds(getDb()),
   };
 });
