@@ -6,17 +6,17 @@ import { colors, radius, space, TAP, textStyles } from '@/theme';
 
 export function PaymentRow({
   fromName,
-  fromSeed,
+  fromId,
   toName,
-  toSeed,
+  toId,
   amountCents,
   note,
   onDelete,
 }: {
   fromName: string;
-  fromSeed: number;
+  fromId: string;
   toName: string;
-  toSeed: number;
+  toId: string;
   amountCents: number;
   note?: string | null;
   onDelete: () => void;
@@ -35,14 +35,14 @@ export function PaymentRow({
       accessibilityLabel={`${fromName} paid ${toName}. Long-press to delete`}
       style={({ pressed }) => [s.card, pressed && { backgroundColor: colors.cardAlt }]}>
       <Row>
-        <Avatar name={fromName} seed={fromSeed} size={28} />
+        <Avatar name={fromName} playerId={fromId} size={28} />
         <Text style={s.name} numberOfLines={1}>
           {fromName}
         </Text>
         <View style={s.arrowWrap}>
           <Text style={s.arrow}>→</Text>
         </View>
-        <Avatar name={toName} seed={toSeed} size={28} />
+        <Avatar name={toName} playerId={toId} size={28} />
         <Text style={s.name} numberOfLines={1}>
           {toName}
         </Text>

@@ -11,7 +11,9 @@ import {
   type ViewStyle,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { avatarColor, colors, radius, sheetShadow, space, TAP, textStyles } from '@/theme';
+import { useSessionsStore } from '@/store/useSessionsStore';
+import { EVEN_COLOR } from '@/domain/playerColor';
+import { colors, radius, sheetShadow, space, TAP, textStyles } from '@/theme';
 
 type TextProps = { children: React.ReactNode; style?: StyleProp<TextStyle>; numberOfLines?: number };
 
@@ -232,10 +234,12 @@ export function Banner({ kind, text, style }: { kind: 'info' | 'warn' | 'success
   );
 }
 
-export function Avatar({ name, seed, size = 40 }: { name: string; seed: number; size?: number }) {
+/** Initial in the player's all-time colour: white at even, green when up, red when down. */
+export function Avatar({ name, playerId, size = 40 }: { name: string; playerId: string; size?: number }) {
+  const color = useSessionsStore((st) => st.playerColors[playerId]) ?? EVEN_COLOR;
   return (
     <View style={[s.avatar, { width: size, height: size, borderRadius: size / 2 }]}>
-      <Text style={{ ...textStyles.labelMd, color: avatarColor(seed), fontSize: size * 0.4 }}>
+      <Text style={{ ...textStyles.labelMd, color, fontSize: size * 0.4 }}>
         {name.trim().charAt(0).toUpperCase() || '?'}
       </Text>
     </View>

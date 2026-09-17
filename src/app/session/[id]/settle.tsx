@@ -104,7 +104,6 @@ export default function SettleScreen() {
   }
 
   const nameOf = (pid: string) => math.rows.find((r) => r.playerId === pid)?.name ?? '?';
-  const seedOf = (pid: string) => math.rows.find((r) => r.playerId === pid)?.colorSeed ?? 0;
   const disc = math.settlement.discrepancyCents;
   const balanced = disc === 0 && math.pendingCount === 0;
   const results = [...math.rows]
@@ -206,9 +205,9 @@ export default function SettleScreen() {
               <PaymentRow
                 key={p.id}
                 fromName={nameOf(p.fromPlayerId)}
-                fromSeed={seedOf(p.fromPlayerId)}
+                fromId={p.fromPlayerId}
                 toName={nameOf(p.toPlayerId)}
-                toSeed={seedOf(p.toPlayerId)}
+                toId={p.toPlayerId}
                 amountCents={p.amountCents}
                 note={p.note}
                 onDelete={() => removePaymentSafe(p.id)}
@@ -242,9 +241,9 @@ export default function SettleScreen() {
             <TransferRow
               key={`${t.from}-${t.to}-${i}`}
               fromName={nameOf(t.from)}
-              fromSeed={seedOf(t.from)}
+              fromId={t.from}
               toName={nameOf(t.to)}
-              toSeed={seedOf(t.to)}
+              toId={t.to}
               amountCents={t.amountCents}
               onMarkPaid={() => markPaid(t)}
             />
@@ -257,7 +256,7 @@ export default function SettleScreen() {
             <View key={r.playerId}>
               {i > 0 ? <Divider /> : null}
               <Row style={s.resultRow}>
-                <Avatar name={r.name} seed={r.colorSeed} size={28} />
+                <Avatar name={r.name} playerId={r.playerId} size={28} />
                 <Text style={s.resultName} numberOfLines={1}>
                   {r.name}
                 </Text>

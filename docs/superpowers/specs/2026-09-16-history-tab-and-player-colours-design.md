@@ -21,6 +21,14 @@ missing), or N players not cashed out. No data change.
 
 ## 3. Player avatar colour
 
+> **Superseded 2026-09-17.** Steven chose performance-based colour instead of a
+> picker: white at an all-time net of zero, blending to green for winners and
+> red for losers, scaled by the largest |net| across players
+> (`src/domain/playerColor.ts`, `useSessionsStore.playerColors`). The picker
+> and `setPlayerColor` were removed; `colorSeed` remains in the schema unused.
+> Original design kept below for history.
+
+
 `Player.colorSeed` already selects `avatarColor(seed)` from an 8-colour palette
 (`seed % 8`). A chosen colour is stored as its palette index in `colorSeed`, so
 no schema migration is needed. New players still get a random seed.

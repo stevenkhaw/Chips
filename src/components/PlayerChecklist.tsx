@@ -27,7 +27,7 @@ export function PlayerChecklist({
             accessibilityLabel={p.name}
             onPress={() => onToggle(p.id)}
             style={({ pressed }) => [s.row, checked && s.rowSelected, pressed && { opacity: 0.8 }]}>
-            <Avatar name={p.name} seed={p.colorSeed} size={36} />
+            <Avatar name={p.name} playerId={p.id} size={36} />
             <Text style={[s.name, !checked && mode === 'check' && { color: colors.textDim }]} numberOfLines={1}>
               {p.name}
             </Text>

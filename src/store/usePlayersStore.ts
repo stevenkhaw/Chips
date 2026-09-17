@@ -8,7 +8,6 @@ interface PlayersState {
   load(): void;
   add(name: string): Player;
   rename(id: string, name: string): void;
-  setColor(id: string, seed: number): void;
   setArchived(id: string, archived: boolean): void;
   remove(id: string): void;
 }
@@ -25,10 +24,6 @@ export const usePlayersStore = create<PlayersState>((set) => {
     },
     rename: (id, name) => {
       repo.renamePlayer(getDb(), id, name);
-      reload();
-    },
-    setColor: (id, seed) => {
-      repo.setPlayerColor(getDb(), id, seed);
       reload();
     },
     setArchived: (id, archived) => {

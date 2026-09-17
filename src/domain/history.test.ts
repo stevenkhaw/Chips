@@ -49,14 +49,14 @@ describe('buildHistory', () => {
 
     expect(h.players.map((p) => p.playerId)).toEqual(['p1', 'p2', 'p3']); // sorted by total desc
     expect(h.players[0]).toEqual({
-      playerId: 'p1', name: 'Ann', colorSeed: 0, nightsPlayed: 2, totalNetCents: 2000, cumulative: [3000, 2000],
+      playerId: 'p1', name: 'Ann', nightsPlayed: 2, totalNetCents: 2000, cumulative: [3000, 2000],
     });
     expect(h.players[1]).toEqual({
-      playerId: 'p2', name: 'Bob', colorSeed: 3, nightsPlayed: 2, totalNetCents: 0, cumulative: [-2000, 0],
+      playerId: 'p2', name: 'Bob', nightsPlayed: 2, totalNetCents: 0, cumulative: [-2000, 0],
     });
     // Cat missed night 2: running total unchanged, cumulative entry null for that night.
     expect(h.players[2]).toEqual({
-      playerId: 'p3', name: 'Cat', colorSeed: 5, nightsPlayed: 1, totalNetCents: -1000, cumulative: [-1000, null],
+      playerId: 'p3', name: 'Cat', nightsPlayed: 1, totalNetCents: -1000, cumulative: [-1000, null],
     });
   });
 

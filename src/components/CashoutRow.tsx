@@ -27,7 +27,7 @@ export function CashoutRow({
       onPress={onPress}
       onLongPress={onLongPress}
       style={({ pressed }) => [s.card, pending && s.cardPending, pressed && { borderColor: colors.accentBorder }]}>
-      <Avatar name={row.name} seed={row.colorSeed} />
+      <Avatar name={row.name} playerId={row.playerId} />
       <View style={s.middle}>
         <Text style={s.name} numberOfLines={1}>
           {row.name}

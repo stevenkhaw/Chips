@@ -2,10 +2,14 @@ import { create } from 'zustand';
 import { getDb } from '@/db/connection';
 import type { Session, SessionDetail, SessionSummary } from '@/domain/types';
 import * as repo from '@/repo/sessions';
+import { buildHistory } from '@/domain/history';
+import { playerColors } from '@/domain/playerColor';
 import type { CreateSessionInput } from '@/repo/sessions';
 
 interface SessionsState {
   summaries: SessionSummary[];
+  /** playerId → all-time colour (white even, green up, red down); refreshed with `summaries`. */
+  playerColors: Record<string, string>;
   detail: SessionDetail | null;
   loadSummaries(): void;
   create(input: CreateSessionInput): Session;
@@ -27,7 +31,10 @@ interface SessionsState {
 }
 
 export const useSessionsStore = create<SessionsState>((set, get) => {
-  const loadSummaries = () => set({ summaries: repo.listSessionSummaries(getDb()) });
+  const loadSummaries = () => {
+    const db = getDb();
+    set({ summaries: repo.listSessionSummaries(db), playerColors: playerColors(buildHistory(repo.listSessionDetails(db))) });
+  };
   const refreshDetail = () => {
     const id = get().detail?.session.id;
     set({ detail: id ? repo.getSessionDetail(getDb(), id) : null });
@@ -40,6 +47,7 @@ export const useSessionsStore = create<SessionsState>((set, get) => {
   };
   return {
     summaries: [],
+    playerColors: {},
     detail: null,
     loadSummaries,
     create: (input) => {

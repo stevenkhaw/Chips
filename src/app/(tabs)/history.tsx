@@ -69,7 +69,7 @@ export default function HistoryScreen() {
               {i > 0 ? <Divider /> : null}
               <Row style={s.standingRow}>
                 <Text style={s.rank}>{i + 1}</Text>
-                <Avatar name={p.name} seed={p.colorSeed} size={32} />
+                <Avatar name={p.name} playerId={p.playerId} size={32} />
                 <View style={{ flex: 1, marginLeft: space.sm }}>
                   <Text style={s.name} numberOfLines={1}>
                     {p.name}
@@ -93,7 +93,7 @@ export default function HistoryScreen() {
               <Caption style={{ width: NIGHT_COL }}>Night</Caption>
               {players.map((p) => (
                 <View key={p.playerId} style={s.playerHead}>
-                  <Avatar name={p.name} seed={p.colorSeed} size={24} />
+                  <Avatar name={p.name} playerId={p.playerId} size={24} />
                   <Caption numberOfLines={1} style={{ marginTop: 2 }}>
                     {p.name}
                   </Caption>

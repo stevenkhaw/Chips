@@ -4,7 +4,9 @@ import Svg, { Circle, G, Line, Polyline, Text as SvgText } from 'react-native-sv
 import { Caption, Row } from '@/components/ui';
 import { fromIso } from '@/date';
 import type { History } from '@/domain/history';
-import { avatarColor, colors, fonts, space } from '@/theme';
+import { useSessionsStore } from '@/store/useSessionsStore';
+import { EVEN_COLOR } from '@/domain/playerColor';
+import { colors, fonts, space } from '@/theme';
 
 const HEIGHT = 220;
 const PAD = { top: 14, right: 64, bottom: 26, left: 8 };
@@ -33,6 +35,8 @@ function shortDate(iso: string): string {
 export function BalanceChart({ history, symbol }: { history: History; symbol: string }) {
   const [width, setWidth] = useState(0);
   const { nights, players } = history;
+  const playerColorMap = useSessionsStore((s) => s.playerColors);
+  const colorOf = (pid: string) => playerColorMap[pid] ?? EVEN_COLOR;
   const n = nights.length;
 
   const plotW = Math.max(width - PAD.left - PAD.right, 0);
@@ -60,7 +64,7 @@ export function BalanceChart({ history, symbol }: { history: History; symbol: st
     p.cumulative.forEach((v, i) => {
       if (v !== null) pts.push({ x: x(i), y: y(v) });
     });
-    return { player: p, color: avatarColor(p.colorSeed), pts, last: pts[pts.length - 1] };
+    return { player: p, color: colorOf(p.playerId), pts, last: pts[pts.length - 1] };
   });
 
   // Direct end labels: nudge apart so names never overlap.
@@ -143,7 +147,7 @@ export function BalanceChart({ history, symbol }: { history: History; symbol: st
       <Row style={s.legend}>
         {players.map((p) => (
           <Row key={p.playerId} style={s.legendItem}>
-            <View style={[s.dot, { backgroundColor: avatarColor(p.colorSeed) }]} />
+            <View style={[s.dot, { backgroundColor: colorOf(p.playerId) }]} />
             <Caption>{p.name}</Caption>
           </Row>
         ))}

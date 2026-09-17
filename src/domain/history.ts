@@ -10,7 +10,6 @@ export interface HistoryNight {
 export interface HistoryPlayer {
   playerId: string;
   name: string;
-  colorSeed: number;
   /** Nights with a settled (non-pending) result. */
   nightsPlayed: number;
   totalNetCents: number;
@@ -43,7 +42,6 @@ export function buildHistory(details: SessionDetail[]): History {
         hp = {
           playerId: player.id,
           name: player.name,
-          colorSeed: player.colorSeed,
           nightsPlayed: 0,
           totalNetCents: 0,
           cumulative: new Array<number | null>(details.length).fill(null),

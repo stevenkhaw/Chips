@@ -4,7 +4,9 @@ import { formatCents, formatSigned } from '@/domain/money';
 import type { SessionSummaryMath } from '@/domain/nets';
 import type { SessionDetail } from '@/domain/types';
 import { formatDate } from '@/date';
-import { avatarColor, colors, fonts } from '@/theme';
+import { useSessionsStore } from '@/store/useSessionsStore';
+import { EVEN_COLOR } from '@/domain/playerColor';
+import { colors, fonts } from '@/theme';
 
 export const SHARE_CARD_WIDTH = 1080;
 
@@ -20,7 +22,8 @@ export const ShareCard = forwardRef<
   }
 >(function ShareCard({ detail, math, symbol, onLayout }, ref) {
   const nameOf = (pid: string) => math.rows.find((r) => r.playerId === pid)?.name ?? '?';
-  const seedOf = (pid: string) => math.rows.find((r) => r.playerId === pid)?.colorSeed ?? 0;
+  const playerColorMap = useSessionsStore((s) => s.playerColors);
+  const colorOf = (pid: string) => playerColorMap[pid] ?? EVEN_COLOR;
   const disc = math.settlement.discrepancyCents;
   const balanced = math.pendingCount === 0 && disc === 0;
   const title = detail.session.title?.trim() ? detail.session.title : 'Poker night';
@@ -43,7 +46,7 @@ export const ShareCard = forwardRef<
             <Text style={s.sectionLabel}>ALREADY PAID</Text>
             {detail.payments.map((p) => (
               <View key={p.id} style={s.transfer}>
-                <View style={[s.dot, { backgroundColor: avatarColor(seedOf(p.fromPlayerId)) }]} />
+                <View style={[s.dot, { backgroundColor: colorOf(p.fromPlayerId) }]} />
                 <Text style={s.transferText} numberOfLines={1}>
                   {nameOf(p.fromPlayerId)} → {nameOf(p.toPlayerId)}
                 </Text>
@@ -60,7 +63,7 @@ export const ShareCard = forwardRef<
         ) : (
           math.settlement.transfers.map((t, i) => (
             <View key={`${t.from}-${t.to}-${i}`} style={s.transfer}>
-              <View style={[s.dot, { backgroundColor: avatarColor(seedOf(t.from)) }]} />
+              <View style={[s.dot, { backgroundColor: colorOf(t.from) }]} />
               <Text style={s.transferText} numberOfLines={1}>
                 {nameOf(t.from)} pays {nameOf(t.to)}
               </Text>
@@ -75,7 +78,7 @@ export const ShareCard = forwardRef<
             <Text style={s.sectionLabel}>RESULTS</Text>
             {results.map((r) => (
               <View key={r.playerId} style={s.resultRow}>
-                <View style={[s.dot, { backgroundColor: avatarColor(r.colorSeed) }]} />
+                <View style={[s.dot, { backgroundColor: colorOf(r.playerId) }]} />
                 <Text style={s.resultName} numberOfLines={1}>
                   {r.name}
                 </Text>

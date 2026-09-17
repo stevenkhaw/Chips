@@ -6,30 +6,30 @@ import { colors, radius, space, TAP, textStyles } from '@/theme';
 
 export function TransferRow({
   fromName,
-  fromSeed,
+  fromId,
   toName,
-  toSeed,
+  toId,
   amountCents,
   onMarkPaid,
 }: {
   fromName: string;
-  fromSeed: number;
+  fromId: string;
   toName: string;
-  toSeed: number;
+  toId: string;
   amountCents: number;
   onMarkPaid?: () => void;
 }) {
   return (
     <View style={s.card} accessibilityLabel={`${fromName} pays ${toName}`}>
       <Row>
-        <Avatar name={fromName} seed={fromSeed} size={28} />
+        <Avatar name={fromName} playerId={fromId} size={28} />
         <Text style={s.name} numberOfLines={1}>
           {fromName}
         </Text>
         <View style={s.pays}>
           <Text style={s.paysLabel}>pays →</Text>
         </View>
-        <Avatar name={toName} seed={toSeed} size={28} />
+        <Avatar name={toName} playerId={toId} size={28} />
         <Text style={s.name} numberOfLines={1}>
           {toName}
         </Text>

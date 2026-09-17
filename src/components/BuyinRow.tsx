@@ -28,7 +28,7 @@ export function BuyinRow({
       accessibilityLabel={`${row.name}, bought in for ${formatCents(row.buyinCents, symbol)}`}
       onLongPress={onLongPress}
       style={({ pressed }) => [s.card, pressed && { borderColor: colors.orangeBorder }]}>
-      <Avatar name={row.name} seed={row.colorSeed} />
+      <Avatar name={row.name} playerId={row.playerId} />
       <View style={s.middle}>
         <Text style={s.name} numberOfLines={1}>
           {row.name}
