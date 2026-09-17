@@ -111,6 +111,29 @@ export default function SettleScreen() {
     .filter((r) => r.netCents !== null)
     .sort((a, b) => (b.netCents ?? 0) - (a.netCents ?? 0));
   const count = math.settlement.transfers.length;
+
+  const explainStatus = () => {
+    if (balanced) {
+      Alert.alert('Books balanced', 'Everyone has cashed out and cash-outs match buy-ins. Settle up below.');
+      return;
+    }
+    const lines: string[] = [];
+    if (math.pendingCount > 0) {
+      lines.push(
+        `${math.pendingCount} player${math.pendingCount === 1 ? ' has' : 's have'} not cashed out yet and ${
+          math.pendingCount === 1 ? 'is' : 'are'
+        } left out of the transfers below.`,
+      );
+    }
+    if (disc !== 0) {
+      lines.push(
+        `Cash-outs are off by ${formatCents(Math.abs(disc), symbol)}: ${
+          disc > 0 ? 'more was cashed out than bought in' : 'less was cashed out than bought in'
+        }. Check the buy-ins and cash-outs.`,
+      );
+    }
+    Alert.alert('Not balanced yet', lines.join('\n\n'));
+  };
   const nightTitle = detail.session.title?.trim() ? detail.session.title : formatDate(detail.session.date);
 
   return (
@@ -129,11 +152,16 @@ export default function SettleScreen() {
           title="Settlements"
           onBack={() => router.back()}
           right={
-            <View style={[s.statusDisc, balanced ? s.statusOk : s.statusWarn]}>
+            <Pressable
+              onPress={explainStatus}
+              accessibilityRole="button"
+              accessibilityLabel={balanced ? 'Books balanced' : 'Books not balanced'}
+              accessibilityHint="Explains the settlement status"
+              style={({ pressed }) => [s.statusDisc, balanced ? s.statusOk : s.statusWarn, pressed && { opacity: 0.7 }]}>
               <Text style={[s.statusGlyph, { color: balanced ? colors.accent : colors.warn }]}>
                 {balanced ? '✓' : '!'}
               </Text>
-            </View>
+            </Pressable>
           }
         />
 

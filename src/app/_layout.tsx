@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Stack } from 'expo-router';
+import { DarkTheme, Stack, ThemeProvider } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { Text, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -18,6 +18,23 @@ import { usePlayersStore } from '@/store/usePlayersStore';
 import { useSettingsStore } from '@/store/useSettingsStore';
 import { useSessionsStore } from '@/store/useSessionsStore';
 import { colors, textStyles } from '@/theme';
+
+/**
+ * Navigation theme. expo-router paints the native stack container (the
+ * UINavigationController view seen behind screens during a swipe-back) with
+ * `colors.background`; without this it falls back to the light DefaultTheme.
+ */
+const navTheme = {
+  ...DarkTheme,
+  colors: {
+    ...DarkTheme.colors,
+    primary: colors.accent,
+    background: colors.bg,
+    card: colors.card,
+    text: colors.text,
+    border: colors.border,
+  },
+};
 
 export default function RootLayout() {
   const [ready, setReady] = useState(false);
@@ -66,14 +83,16 @@ export default function RootLayout() {
 
   return (
     <SafeAreaProvider>
-      <StatusBar style="light" />
-      <Stack
-        screenOptions={{
-          headerShown: false,
-          contentStyle: { backgroundColor: colors.bg },
-          animation: 'slide_from_right',
-        }}
-      />
+      <ThemeProvider value={navTheme}>
+        <StatusBar style="light" />
+        <Stack
+          screenOptions={{
+            headerShown: false,
+            contentStyle: { backgroundColor: colors.bg },
+            animation: 'slide_from_right',
+          }}
+        />
+      </ThemeProvider>
     </SafeAreaProvider>
   );
 }
