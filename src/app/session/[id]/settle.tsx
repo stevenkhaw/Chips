@@ -333,6 +333,7 @@ export default function SettleScreen() {
       <PaymentSheet
         visible={paymentSheetVisible}
         players={detail.players.map((p) => p.player)}
+        math={math}
         onSave={savePayment}
         onCancel={() => setPaymentSheetVisible(false)}
       />
