@@ -1,4 +1,4 @@
-import { buildHistory, playerStats } from './history';
+import { balanceRuns, buildHistory, playerStats } from './history';
 import type { Buyin, Player, SessionDetail, SessionPlayer } from './types';
 
 const base = { createdAt: 0, updatedAt: 0, deletedAt: null };
@@ -77,6 +77,53 @@ describe('buildHistory', () => {
       { p: ann, buyin: 2000, cashout: 2000 },
     ]);
     expect(buildHistory([n1]).players.map((p) => p.name)).toEqual(['Ann', 'Cat']);
+  });
+});
+
+describe('balanceRuns', () => {
+  it('returns no runs for no nights', () => {
+    expect(balanceRuns([])).toEqual([]);
+  });
+
+  it('is one solid run when the player played every night', () => {
+    expect(balanceRuns([3000, 2000])).toEqual([
+      { dashed: false, points: [{ index: -1, value: 0 }, { index: 0, value: 3000 }, { index: 1, value: 2000 }] },
+    ]);
+  });
+
+  it('dashes a gap in the middle, flat at the last known total, then resumes solid', () => {
+    expect(balanceRuns([100, null, 300])).toEqual([
+      { dashed: false, points: [{ index: -1, value: 0 }, { index: 0, value: 100 }] },
+      { dashed: true, points: [{ index: 0, value: 100 }, { index: 1, value: 100 }] },
+      { dashed: false, points: [{ index: 1, value: 100 }, { index: 2, value: 300 }] },
+    ]);
+  });
+
+  it('dashes at $0 before a player joins late', () => {
+    expect(balanceRuns([null, 200])).toEqual([
+      { dashed: true, points: [{ index: -1, value: 0 }, { index: 0, value: 0 }] },
+      { dashed: false, points: [{ index: 0, value: 0 }, { index: 1, value: 200 }] },
+    ]);
+  });
+
+  it('dashes a flat tail after a player stops playing', () => {
+    expect(balanceRuns([100, null, null])).toEqual([
+      { dashed: false, points: [{ index: -1, value: 0 }, { index: 0, value: 100 }] },
+      { dashed: true, points: [{ index: 0, value: 100 }, { index: 1, value: 100 }, { index: 2, value: 100 }] },
+    ]);
+  });
+
+  it('treats a pending cash-out (null) the same as a missed night', () => {
+    expect(balanceRuns([100, null])).toEqual([
+      { dashed: false, points: [{ index: -1, value: 0 }, { index: 0, value: 100 }] },
+      { dashed: true, points: [{ index: 0, value: 100 }, { index: 1, value: 100 }] },
+    ]);
+  });
+
+  it('is one dashed run flat at $0 when the player never has a settled night', () => {
+    expect(balanceRuns([null, null])).toEqual([
+      { dashed: true, points: [{ index: -1, value: 0 }, { index: 0, value: 0 }, { index: 1, value: 0 }] },
+    ]);
   });
 });
 

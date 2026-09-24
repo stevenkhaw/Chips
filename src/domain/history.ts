@@ -62,6 +62,55 @@ export function buildHistory(details: SessionDetail[]): History {
   return { nights, players };
 }
 
+export interface BalanceRunPoint {
+  /** Aligned with `History.nights`; -1 is the "start" slot before the first night. */
+  index: number;
+  value: number;
+}
+
+export interface BalanceRun {
+  /** true when this run should be drawn dotted (the player sat out or a cash-out is pending). */
+  dashed: boolean;
+  /** Chronological points for one Polyline segment; a run's first point equals the previous run's last point. */
+  points: BalanceRunPoint[];
+}
+
+/**
+ * Splits one player's `cumulative` series into drawable runs: a solid run for played,
+ * settled nights, and a dashed run — flat at the last known total — for nights the
+ * player missed or whose cash-out is still pending. Consecutive nights of the same
+ * kind merge into a single run so each renders as one Polyline; adjacent runs share
+ * their boundary point so the line stays continuous. Starts from the "start" slot
+ * (index -1, value 0). Returns `[]` when there are no nights.
+ */
+export function balanceRuns(cumulative: (number | null)[]): BalanceRun[] {
+  if (cumulative.length === 0) return [];
+
+  const runs: BalanceRun[] = [];
+  let prevPoint: BalanceRunPoint = { index: -1, value: 0 };
+  let lastKnown = 0;
+  let current: BalanceRun | null = null;
+
+  cumulative.forEach((v, i) => {
+    const dashed = v === null;
+    const value = dashed ? lastKnown : v;
+    const point: BalanceRunPoint = { index: i, value };
+
+    if (!current || current.dashed !== dashed) {
+      if (current) runs.push(current);
+      current = { dashed, points: [prevPoint, point] };
+    } else {
+      current.points.push(point);
+    }
+
+    prevPoint = point;
+    if (!dashed) lastKnown = value;
+  });
+
+  if (current) runs.push(current);
+  return runs;
+}
+
 export interface PlayerNightStat {
   session: Session;
   /** Net for this night; `null` while the cash-out is pending. */

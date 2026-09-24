@@ -3,7 +3,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import Svg, { Circle, G, Line, Polyline, Text as SvgText } from 'react-native-svg';
 import { Caption, Row } from '@/components/ui';
 import { fromIso } from '@/date';
-import type { History } from '@/domain/history';
+import { balanceRuns, type History } from '@/domain/history';
 import { useSessionsStore } from '@/store/useSessionsStore';
 import { EVEN_COLOR } from '@/domain/playerColor';
 import { colors, fonts, space } from '@/theme';
@@ -84,11 +84,16 @@ export function BalanceChart({
   const xLabels = nights.map((nt, i) => i).filter((i) => i === n - 1 || i % labelEvery === 0);
 
   const series = players.map((p) => {
-    const pts: { x: number; y: number }[] = [{ x: x(-1), y: y(0) }];
+    const runs = balanceRuns(p.cumulative).map((r) => ({
+      dashed: r.dashed,
+      pts: r.points.map((pt) => ({ x: x(pt.index), y: y(pt.value) })),
+    }));
+    const dots: { x: number; y: number }[] = [];
     p.cumulative.forEach((v, i) => {
-      if (v !== null) pts.push({ x: x(i), y: y(v) });
+      if (v !== null) dots.push({ x: x(i), y: y(v) });
     });
-    return { player: p, color: colorOf(p.playerId), pts, last: pts[pts.length - 1] };
+    const lastRunPts = runs[runs.length - 1]?.pts ?? [{ x: x(-1), y: y(0) }];
+    return { player: p, color: colorOf(p.playerId), runs, dots, last: lastRunPts[lastRunPts.length - 1] };
   });
 
   // Direct end labels: nudge apart so names never overlap.
@@ -140,15 +145,19 @@ export function BalanceChart({
           ))}
           {series.map((s) => (
             <G key={s.player.playerId}>
-              <Polyline
-                points={s.pts.map((p) => `${p.x},${p.y}`).join(' ')}
-                fill="none"
-                stroke={s.color}
-                strokeWidth={2 * scale}
-                strokeLinejoin="round"
-                strokeLinecap="round"
-              />
-              {s.pts.slice(1).map((p, i) => (
+              {s.runs.map((r, i) => (
+                <Polyline
+                  key={i}
+                  points={r.pts.map((p) => `${p.x},${p.y}`).join(' ')}
+                  fill="none"
+                  stroke={s.color}
+                  strokeWidth={2 * scale}
+                  strokeLinejoin="round"
+                  strokeLinecap="round"
+                  strokeDasharray={r.dashed ? `${4 * scale} ${4 * scale}` : undefined}
+                />
+              ))}
+              {s.dots.map((p, i) => (
                 <Circle key={i} cx={p.x} cy={p.y} r={3.5 * scale} fill={s.color} stroke={colors.card} strokeWidth={2 * scale} />
               ))}
             </G>
@@ -178,7 +187,9 @@ export function BalanceChart({
               </Row>
             ))}
           </Row>
-          <Text style={s.hint}>Running total after each night. Lines pause while a cash-out is pending.</Text>
+          <Text style={s.hint}>
+            Running total after each night. Dotted where a player sat out or a cash-out is pending.
+          </Text>
         </>
       ) : null}
     </View>
