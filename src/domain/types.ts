@@ -70,3 +70,13 @@ export interface SessionSummary {
   totalBuyinCents: number;
   topWinner: { name: string; netCents: number } | null;
 }
+
+export type HouseRole = 'owner' | 'reader';
+
+export interface House extends BaseRow {
+  name: string;
+  role: HouseRole;
+  joinCode: string | null;
+  currencySymbol: string;
+  published: boolean;
+}
