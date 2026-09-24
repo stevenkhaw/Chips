@@ -124,6 +124,21 @@ describe('syncActions', () => {
     expect(push).toHaveBeenCalledTimes(2);
   });
 
+  it('pushes again for a new write after an earlier push failed offline', async () => {
+    push.mockRejectedValueOnce(new TypeError('Network request failed'));
+    push.mockResolvedValue(1);
+
+    schedulePush();
+    await jest.advanceTimersByTimeAsync(PUSH_DEBOUNCE_MS);
+    expect(push).toHaveBeenCalledTimes(1);
+    expect(useSyncStore.getState().byHouse[houseId].phase).toBe('offline');
+
+    schedulePush(); // a new write; the offline skip must not silence this debounced push too
+    await jest.advanceTimersByTimeAsync(PUSH_DEBOUNCE_MS);
+    expect(push).toHaveBeenCalledTimes(2);
+    expect(useSyncStore.getState().byHouse[houseId]).toEqual({ phase: 'idle', message: null });
+  });
+
   it('pushDirtyHouses waits for an in-flight push before re-checking pending rows', async () => {
     let release!: () => void;
     push.mockImplementationOnce(() => new Promise<number>((r) => (release = () => r(1))));
@@ -135,17 +150,23 @@ describe('syncActions', () => {
     expect(push).toHaveBeenCalledTimes(2);
   });
 
-  it('does not loop when a push keeps failing (no-loop property)', async () => {
+  it('does not loop when a push keeps failing, even across one new write (no-loop property)', async () => {
     push.mockRejectedValue(new TypeError('Network request failed'));
     const stop = startSync();
-    await jest.advanceTimersByTimeAsync(10 * PUSH_DEBOUNCE_MS);
-    // Only the initial `syncAll()` call inside `startSync` ever pushes. `pushDirtyHouses` (the one
-    // thing a debounce triggers) only pushes, never pulls, so it never touches a store any
-    // subscriber watches; and a failed push's `finally` only calls `refreshPending()` and
-    // `useHousesStore.load()`, whose house signature and pending counts are unchanged here (the
-    // mock never clears `dirty`), so nothing re-arms `schedulePush`. No AppState change and no
-    // house-store write happen in this test, so there is no other trigger for a second push.
+    await jest.advanceTimersByTimeAsync(0); // let the initial `syncAll()` push settle to 'offline'
     expect(push).toHaveBeenCalledTimes(1);
+
+    schedulePush(); // a write landing after the failure — must still get its own debounced push
+    await jest.advanceTimersByTimeAsync(10 * PUSH_DEBOUNCE_MS);
+    // Exactly 2: the initial `syncAll()` push, plus the one push `schedulePush()` above produces
+    // once its debounce fires (this is the case fix round 2 restores — an offline failure must not
+    // silence every later debounced push). That second push also fails and sets 'offline' again,
+    // and nothing else in this test ever calls `schedulePush` or `syncHouse` again: `pushDirtyHouses`
+    // only pushes, never pulls, so it never touches a store any subscriber watches, and a failed
+    // push's `finally` only updates `useSyncStore`/`refreshPending()` plus `useHousesStore.load()`,
+    // whose house signature and pending counts are unchanged (the mock never clears `dirty`). So
+    // advancing eight more debounce periods with no further write produces no further push.
+    expect(push).toHaveBeenCalledTimes(2);
     stop();
   });
 

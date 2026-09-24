@@ -40,15 +40,21 @@ export function syncHouse(houseId: string): Promise<void> {
  * Refreshes local stores from what a reader pull just wrote, without touching the open session
  * detail. `reloadAll` resets `detail` to null, which leaves an open session screen stuck on
  * "Loading…" since screens only call `open(id)` when `id` changes; this refreshes every other
- * house-scoped store and, only if a detail is open, recomputes it in place (`refreshDetail` sets
- * it to null itself if the session no longer exists after the pull).
+ * house-scoped store and, only if a detail is open, recomputes it in place instead.
+ * `useSessionsStore.refreshDetail` already calls `loadSummaries` itself (it ends with it), so
+ * when a detail is open this calls only `refreshDetail` — calling `loadSummaries` first too would
+ * just recompute summaries twice. `refreshDetail` also sets `detail` to null itself if the session
+ * no longer exists after the pull.
  */
 function refreshCurrentHouseViews(): void {
   useHousesStore.getState().load();
   useSettingsStore.getState().load();
   usePlayersStore.getState().load();
-  useSessionsStore.getState().loadSummaries();
-  if (useSessionsStore.getState().detail) useSessionsStore.getState().refreshDetail();
+  if (useSessionsStore.getState().detail) {
+    useSessionsStore.getState().refreshDetail();
+  } else {
+    useSessionsStore.getState().loadSummaries();
+  }
 }
 
 async function runSync(houseId: string): Promise<void> {
@@ -86,17 +92,21 @@ async function runSync(houseId: string): Promise<void> {
 /**
  * Pushes every owner house with pending rows. If a house is already syncing, waits for that run
  * and then re-checks: a write that lands mid-push is not silently dropped until the next trigger.
- * Skips a house currently marked offline so this can't spin against a dead network.
+ * The offline skip applies only to that trailing re-check, right after the run it waited on just
+ * failed for lack of network — not to every push, or a single offline failure would silence every
+ * later debounced push (spec §3.1) until the app foregrounds or the house is switched.
  */
 export async function pushDirtyHouses(): Promise<void> {
   const db = getDb();
   for (const h of syncRepo.listSyncHouses(db)) {
     if (h.role !== 'owner') continue;
     const running = inflight.get(h.id);
-    if (running) await running;
-    if (syncRepo.pendingCount(db, h.id) > 0 && useSyncStore.getState().byHouse[h.id]?.phase !== 'offline') {
-      await syncHouse(h.id);
+    if (running) {
+      await running;
+      // Don't immediately retry a push that just failed for lack of network.
+      if (useSyncStore.getState().byHouse[h.id]?.phase === 'offline') continue;
     }
+    if (syncRepo.pendingCount(db, h.id) > 0) await syncHouse(h.id);
   }
 }
 
