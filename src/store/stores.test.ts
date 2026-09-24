@@ -3,12 +3,16 @@ import { setDb } from '@/db/connection';
 import { usePlayersStore } from './usePlayersStore';
 import { useSettingsStore } from './useSettingsStore';
 import { useSessionsStore } from './useSessionsStore';
+import { useHousesStore, selectCanEdit } from './useHousesStore';
+import { createHouse, deleteHouse, reloadAll, switchHouse } from './houseActions';
 
 beforeEach(() => {
   setDb(createTestDb());
   usePlayersStore.setState({ players: [] });
   useSettingsStore.setState({ settings: { defaultBuyinCents: 2000, currencySymbol: '$' }, denoms: [] });
   useSessionsStore.setState({ summaries: [], detail: null });
+  useHousesStore.setState({ houses: [], currentHouseId: null, previewAsReader: false });
+  reloadAll();
 });
 
 describe('usePlayersStore', () => {
@@ -92,5 +96,56 @@ describe('useSessionsStore', () => {
     const paymentId = useSessionsStore.getState().detail!.payments[0].id;
     useSessionsStore.getState().removePayment(paymentId);
     expect(useSessionsStore.getState().detail!.payments).toHaveLength(0);
+  });
+});
+
+describe('houses', () => {
+  it('reloadAll loads My House as current', () => {
+    const s = useHousesStore.getState();
+    expect(s.houses.map((h) => h.name)).toEqual(['My House']);
+    expect(s.currentHouseId).toBe(s.houses[0].id);
+  });
+
+  it('createHouse makes the new house current and scopes players, nights and currency', () => {
+    usePlayersStore.getState().add('Ann');
+    const ann = usePlayersStore.getState().players[0];
+    useSessionsStore.getState().create({ date: '2026-09-16', title: null, defaultBuyinCents: 2000, playerIds: [ann.id] });
+    const home = useHousesStore.getState().currentHouseId!;
+
+    const work = createHouse({ name: 'Work', currencySymbol: '€' });
+    expect(useHousesStore.getState().currentHouseId).toBe(work.id);
+    expect(usePlayersStore.getState().players).toEqual([]);
+    expect(useSessionsStore.getState().summaries).toEqual([]);
+    expect(useSettingsStore.getState().settings.currencySymbol).toBe('€');
+
+    switchHouse(home);
+    expect(usePlayersStore.getState().players.map((p) => p.name)).toEqual(['Ann']);
+    expect(useSessionsStore.getState().summaries).toHaveLength(1);
+    expect(useSettingsStore.getState().settings.currencySymbol).toBe('$');
+  });
+
+  it('switching closes any open night', () => {
+    const ann = usePlayersStore.getState().add('Ann');
+    const s = useSessionsStore.getState().create({ date: '2026-09-16', title: null, defaultBuyinCents: 2000, playerIds: [ann.id] });
+    useSessionsStore.getState().open(s.id);
+    createHouse({ name: 'Work', currencySymbol: '$' });
+    expect(useSessionsStore.getState().detail).toBeNull();
+  });
+
+  it('deleteHouse falls back to another house', () => {
+    const home = useHousesStore.getState().currentHouseId!;
+    const work = createHouse({ name: 'Work', currencySymbol: '$' });
+    deleteHouse(work.id);
+    expect(useHousesStore.getState().currentHouseId).toBe(home);
+    expect(useHousesStore.getState().houses).toHaveLength(1);
+  });
+
+  it('selectCanEdit: owners edit, readers and reader-preview do not', () => {
+    const owner = useHousesStore.getState();
+    expect(selectCanEdit(owner)).toBe(true);
+    expect(selectCanEdit({ ...owner, previewAsReader: true })).toBe(false);
+    const readerHouses = owner.houses.map((h) => ({ ...h, role: 'reader' as const }));
+    expect(selectCanEdit({ ...owner, houses: readerHouses })).toBe(false);
+    expect(selectCanEdit({ ...owner, currentHouseId: null })).toBe(false);
   });
 });

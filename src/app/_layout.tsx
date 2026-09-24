@@ -14,9 +14,7 @@ import {
 import { openExpoDb } from '@/db/expo-adapter';
 import { migrate } from '@/db/schema';
 import { setDb } from '@/db/connection';
-import { usePlayersStore } from '@/store/usePlayersStore';
-import { useSettingsStore } from '@/store/useSettingsStore';
-import { useSessionsStore } from '@/store/useSessionsStore';
+import { reloadAll } from '@/store/houseActions';
 import { colors, textStyles } from '@/theme';
 
 /**
@@ -57,9 +55,7 @@ export default function RootLayout() {
       const db = openExpoDb();
       migrate(db);
       setDb(db);
-      useSettingsStore.getState().load();
-      usePlayersStore.getState().load();
-      useSessionsStore.getState().loadSummaries();
+      reloadAll();
       setReady(true);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
