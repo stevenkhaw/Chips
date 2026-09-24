@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { getDb } from '@/db/connection';
 import type { Player } from '@/domain/types';
 import * as repo from '@/repo/players';
+import { getCurrentHouseId } from '@/repo/houses';
 
 interface PlayersState {
   players: Player[];
@@ -13,12 +14,18 @@ interface PlayersState {
 }
 
 export const usePlayersStore = create<PlayersState>((set) => {
-  const reload = () => set({ players: repo.listPlayers(getDb(), { includeArchived: true }) });
+  const reload = () => {
+    const db = getDb();
+    const houseId = getCurrentHouseId(db);
+    set({ players: repo.listPlayers(db, houseId, { includeArchived: true }) });
+  };
   return {
     players: [],
     load: reload,
     add: (name) => {
-      const p = repo.createPlayer(getDb(), name);
+      const db = getDb();
+      const houseId = getCurrentHouseId(db);
+      const p = repo.createPlayer(db, houseId, name);
       reload();
       return p;
     },

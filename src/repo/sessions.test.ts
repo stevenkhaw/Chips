@@ -1,5 +1,6 @@
 import { createTestDb } from '../../test/nodeDb';
 import { createPlayer } from './players';
+import { getCurrentHouseId } from './houses';
 import {
   createSession, updateSession, deleteSession, listSessionSummaries, listSessionDetails, getSessionDetail,
   addPlayerToSession, removePlayerFromSession, setCashout, addBuyin, updateBuyin, removeBuyin, lastSessionPlayerIds,
@@ -8,9 +9,10 @@ import {
 
 function setup() {
   const db = createTestDb();
-  const ann = createPlayer(db, 'Ann');
-  const bob = createPlayer(db, 'Bob');
-  const cat = createPlayer(db, 'Cat');
+  const h = getCurrentHouseId(db);
+  const ann = createPlayer(db, h, 'Ann');
+  const bob = createPlayer(db, h, 'Bob');
+  const cat = createPlayer(db, h, 'Cat');
   return { db, ann, bob, cat };
 }
 
