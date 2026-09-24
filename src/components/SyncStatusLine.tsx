@@ -28,7 +28,7 @@ export function SyncStatusLine({ house }: { house: House }) {
   const displayText = status.tone === 'error' && message ? `${status.text} · ${message}` : status.text;
   const text = <Text style={[textStyles.bodySm, { color, marginTop: space.xs }]}>{displayText}</Text>;
   return status.tappable ? (
-    <Pressable accessibilityRole="button" accessibilityLabel={`${status.text}. Sync now`} onPress={() => void syncHouse(house.id)}>
+    <Pressable accessibilityRole="button" accessibilityLabel={`${displayText}. Sync now`} onPress={() => void syncHouse(house.id)}>
       {text}
     </Pressable>
   ) : (

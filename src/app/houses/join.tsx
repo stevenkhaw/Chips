@@ -26,7 +26,7 @@ export default function JoinHouseScreen() {
         router.dismissTo('/');
         return;
       }
-      setProblem(r.error === 'locked' ? `Too many tries. Try again in ${r.minutes} min.` : 'Code or password incorrect.');
+      setProblem(r.error === 'locked' ? `Too many tries. Try again in ${r.minutes} min.` : 'Code or password incorrect');
     } catch (e) {
       setProblem(describeSyncError(e).message);
     } finally {
