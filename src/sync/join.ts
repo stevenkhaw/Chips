@@ -1,7 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Db } from '@/db/types';
 import type { HouseRole } from '@/domain/types';
-import { insertJoinedHouse } from '@/repo/sync';
+import { hasPublishedHouses, insertJoinedHouse } from '@/repo/sync';
 import { ensureSession, rpcJoinHouse } from './remote';
 import { pullHouse } from './pull';
 
@@ -21,7 +21,7 @@ export async function joinByCode(
   password: string,
   displayName?: string | null,
 ): Promise<JoinOutcome> {
-  await ensureSession(client);
+  await ensureSession(client, { allowNewUser: !hasPublishedHouses(db) });
   const r = await rpcJoinHouse(client, code, password, displayName);
   if (!r.ok) return r;
   if (insertJoinedHouse(db, r.house, r.role)) {

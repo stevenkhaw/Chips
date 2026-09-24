@@ -32,4 +32,11 @@ describe('describeSyncError', () => {
     expect(describeSyncError(new Error('boom'))).toEqual({ kind: 'error', message: 'boom' });
     expect(describeSyncError('weird')).toEqual({ kind: 'error', message: 'weird' });
   });
+
+  it('maps signed_out by code or message', () => {
+    const e = Object.assign(new Error('signed_out'), { code: 'signed_out' });
+    expect(describeSyncError(e)).toEqual({ kind: 'error', message: 'Signed out of sharing' });
+    expect(describeSyncError(new Error('signed_out'))).toEqual({ kind: 'error', message: 'Signed out of sharing' });
+    expect(describeSyncError({ code: 'signed_out', message: 'whatever' })).toEqual({ kind: 'error', message: 'Signed out of sharing' });
+  });
 });

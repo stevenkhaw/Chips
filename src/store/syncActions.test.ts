@@ -18,7 +18,7 @@ import { pullHouse } from '@/sync/pull';
 import { reloadAll } from './houseActions';
 import { ensureSession, rpcCreateHouse, rpcLeaveHouse } from '@/sync/remote';
 import { loadPassword } from '@/sync/passwords';
-import { PUSH_DEBOUNCE_MS, leaveHouse, pushDirtyHouses, schedulePush, shareHouse, syncHouse, startSync } from './syncActions';
+import { PUSH_DEBOUNCE_MS, leaveHouse, loadMembers, pushDirtyHouses, schedulePush, shareHouse, syncHouse, startSync } from './syncActions';
 import { useSessionsStore } from './useSessionsStore';
 import { useSyncStore } from './useSyncStore';
 import { getDb } from '@/db/connection';
@@ -211,5 +211,13 @@ describe('syncActions', () => {
     expect(push).toHaveBeenCalled();
     expect(useSyncStore.getState().byHouse[house.id]).toEqual({ phase: 'offline', message: "You're offline" });
     expect(useSyncStore.getState().pending[house.id]).toBeGreaterThan(0);
+  });
+
+  it('loadMembers never signs in: no session means signed out', async () => {
+    const signIn = jest.fn();
+    setSyncClient({ auth: { getSession: async () => ({ data: { session: null } }), signInAnonymously: signIn } } as never);
+    await expect(loadMembers(houseId)).rejects.toMatchObject({ code: 'signed_out' });
+    expect(signIn).not.toHaveBeenCalled();
+    expect(session).not.toHaveBeenCalled();
   });
 });

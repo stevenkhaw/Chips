@@ -1,6 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Db } from '@/db/types';
-import { dirtyAllInHouse, getSyncHouse, markPublished } from '@/repo/sync';
+import { dirtyAllInHouse, getSyncHouse, hasPublishedHouses, markPublished } from '@/repo/sync';
 import { ensureSession, rpcCreateHouse } from './remote';
 
 /**
@@ -20,7 +20,7 @@ export async function publishHouse(
   if (h.role !== 'owner') throw new Error('Only the owner can share this house');
   if (password.length < 4) throw new Error('Password needs at least 4 characters');
 
-  await ensureSession(client);
+  await ensureSession(client, { allowNewUser: !hasPublishedHouses(db) });
   const created = await rpcCreateHouse(client, { id: h.id, name: h.name, currency: h.currencySymbol, password });
   // markPublished and dirtyAllInHouse are each already atomic (dirtyAllInHouse wraps its own
   // transaction); Db.transaction() (both the expo and in-memory adapters) does not support

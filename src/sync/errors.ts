@@ -22,6 +22,7 @@ export function describeSyncError(e: unknown): SyncErrorInfo {
   const code = typeof err.code === 'string' ? err.code : '';
   const name = typeof err.name === 'string' ? err.name : '';
 
+  if (code === 'signed_out' || message === 'signed_out') return { kind: 'error', message: 'Signed out of sharing' };
   if (OFFLINE.test(message) || OFFLINE_NAMES.has(name)) return { kind: 'offline', message: "You're offline" };
   if (code === 'P0001' && RPC_MESSAGES[message]) return { kind: 'error', message: RPC_MESSAGES[message] };
   if (code === '23514') return { kind: 'error', message: 'A name or symbol is too long' };

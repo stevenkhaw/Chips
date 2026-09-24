@@ -4,7 +4,7 @@ import { createHouse, getCurrentHouseId, getHouse, listHouses } from './houses';
 import { createPlayer, renamePlayer } from './players';
 import { addBuyin, createSession } from './sessions';
 import {
-  SYNC_COLUMNS, applyPulledRows, applyServerHouse, dirtyAllInHouse, dirtyRows, getSyncHouse, insertJoinedHouse,
+  SYNC_COLUMNS, applyPulledRows, applyServerHouse, dirtyAllInHouse, dirtyRows, getSyncHouse, hasPublishedHouses, insertJoinedHouse,
   listSyncHouses, markClean, markPublished, pendingCount, purgeHouse, setLastSynced, setPullCursor, type ServerHouse,
 } from './sync';
 
@@ -72,6 +72,16 @@ describe('sync repo', () => {
     markPublished(db, houseId, 'K7QXM2PA');
     expect(getHouse(db, houseId)).toEqual(expect.objectContaining({ published: true, joinCode: 'K7QXM2PA' }));
     expect(listSyncHouses(db).map((h) => h.id)).toEqual([houseId]);
+  });
+
+  it('hasPublishedHouses is true once any house is shared or joined', () => {
+    const db = createTestDb();
+    expect(hasPublishedHouses(db)).toBe(false);
+    insertJoinedHouse(db, server(), 'reader');
+    expect(hasPublishedHouses(db)).toBe(true);
+    const db2 = createTestDb();
+    markPublished(db2, getCurrentHouseId(db2), 'ABCDEFGH');
+    expect(hasPublishedHouses(db2)).toBe(true);
   });
 
   it('lists deleted published houses only while they still need a push', () => {

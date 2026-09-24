@@ -78,7 +78,8 @@ describeIt('sync against local Supabase', () => {
 
   it('signs in anonymously and keeps the same user', async () => {
     const c = newClient();
-    const a = await ensureSession(c);
+    await expect(ensureSession(c)).rejects.toMatchObject({ code: 'signed_out' }); // no new user unless allowed
+    const a = await ensureSession(c, { allowNewUser: true });
     const b = await ensureSession(c);
     expect(a).toMatch(/^[0-9a-f-]{36}$/);
     expect(b).toBe(a);
@@ -334,5 +335,23 @@ describeIt('sync against local Supabase', () => {
     expect(getHouse(readerDb, house.id)).toEqual(expect.objectContaining({ id: house.id, role: 'reader', published: true }));
     expect(await pullHouse(readerDb, reader, house.id)).toBe('ok');
     expect(snapshot(readerDb, house.id)).toEqual(snapshot(ownerDb, house.id));
+  });
+
+  it('a phone that already has shared houses never silently becomes a new anonymous user', async () => {
+    const ownerDb = createTestDb();
+    const { house } = seedHouse(ownerDb);
+    const { joinCode } = await publishAndPush(ownerDb, newClient(), house.id, 'hunter22');
+
+    // First join on this phone creates the account.
+    const readerDb = createTestDb();
+    expect(await joinByCode(readerDb, newClient(), joinCode, 'hunter22')).toEqual({ ok: true, houseId: house.id, role: 'reader' });
+
+    // The session is lost (a fresh client): joining or sharing again must not mint a new user.
+    const lost = newClient();
+    await expect(joinByCode(readerDb, lost, joinCode, 'hunter22')).rejects.toMatchObject({ code: 'signed_out' });
+    const other = createHouse(readerDb, { name: 'Second', currencySymbol: '$' });
+    await expect(publishHouse(readerDb, lost, other.id, 'hunter22')).rejects.toMatchObject({ code: 'signed_out' });
+    expect((await lost.auth.getSession()).data.session).toBeNull();
+    expect(getHouse(readerDb, other.id)?.published).toBe(false);
   });
 });

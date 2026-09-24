@@ -100,6 +100,11 @@ export function getSyncHouse(db: Db, id: string): SyncHouse | null {
   return r ? toSyncHouse(r) : null;
 }
 
+/** True once any house on this phone is shared or joined (the anonymous account already exists). */
+export function hasPublishedHouses(db: Db): boolean {
+  return db.first('SELECT 1 FROM houses WHERE published = 1 LIMIT 1') != null;
+}
+
 export function markPublished(db: Db, id: string, joinCode: string): void {
   db.run('UPDATE houses SET published = 1, join_code = ? WHERE id = ?', [joinCode, id]);
 }

@@ -6,13 +6,31 @@ import type { TableCursor } from './cursor';
 export const PAGE_SIZE = 500;
 const HOUSE_COLS = 'id, name, currency_symbol, join_code, created_at, updated_at, deleted_at';
 
-/** Signs in anonymously the first time; returns the auth user id. */
-export async function ensureSession(client: SupabaseClient): Promise<string> {
+export const signedOutError = () => Object.assign(new Error('signed_out'), { code: 'signed_out' as const });
+
+/**
+ * Returns the auth user id, signing in anonymously only when `allowNewUser` is set.
+ *
+ * A phone that has already shared or joined a house must keep its first anonymous user: a new
+ * one owns nothing and belongs to nothing, so readers would be wiped as "removed" and owner pushes
+ * refused. Callers pass `allowNewUser: true` only when the local db has no published houses (the
+ * first share or join creates the account); otherwise a lost session throws `signed_out`.
+ * Stopgap until phase 5's account linking lets a lost session be recovered.
+ */
+export async function ensureSession(client: SupabaseClient, opts?: { allowNewUser?: boolean }): Promise<string> {
   const { data } = await client.auth.getSession();
   if (data.session) return data.session.user.id;
+  if (!opts?.allowNewUser) throw signedOutError();
   const { data: signed, error } = await client.auth.signInAnonymously();
   if (error || !signed.user) throw error ?? new Error('Sign-in failed');
   return signed.user.id;
+}
+
+/** The signed-in user id, without ever signing in. Throws `signed_out` when there's no session. */
+export async function currentUserId(client: SupabaseClient): Promise<string> {
+  const { data } = await client.auth.getSession();
+  if (!data.session) throw signedOutError();
+  return data.session.user.id;
 }
 
 export async function rpcCreateHouse(

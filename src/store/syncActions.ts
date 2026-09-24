@@ -9,7 +9,7 @@ import { pullHouse } from '@/sync/pull';
 import { publishHouse } from '@/sync/publish';
 import { pushHouse } from '@/sync/push';
 import { getSyncClient, requireSyncClient } from '@/sync/registry';
-import { ensureSession, listMembers, rpcLeaveHouse, rpcRemoveMember, rpcResetPassword, type Member } from '@/sync/remote';
+import { currentUserId, listMembers, rpcLeaveHouse, rpcRemoveMember, rpcResetPassword, type Member } from '@/sync/remote';
 import { reloadAll } from './houseActions';
 import { useHousesStore } from './useHousesStore';
 import { usePlayersStore } from './usePlayersStore';
@@ -213,7 +213,7 @@ export async function resetHousePassword(houseId: string, password: string): Pro
 
 export async function loadMembers(houseId: string): Promise<{ me: string; members: Member[] }> {
   const client = requireSyncClient();
-  const me = await ensureSession(client);
+  const me = await currentUserId(client); // never signs in: a new anonymous user isn't a member
   return { me, members: await listMembers(client, houseId) };
 }
 
