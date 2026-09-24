@@ -8,6 +8,7 @@ import { useSessionsStore } from './useSessionsStore';
 
 /** Reload every house-scoped store. Call after anything that changes which house is current or its currency. */
 export function reloadAll(): void {
+  repo.ensureCurrentHouse(getDb());
   useHousesStore.getState().load();
   useSettingsStore.getState().load();
   usePlayersStore.getState().load();

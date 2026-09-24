@@ -25,6 +25,7 @@ export default function HouseSettingsScreen() {
     );
   }
 
+  const isOwner = house.role === 'owner';
   const changed = name.trim() !== house.name || currency.trim() !== house.currencySymbol;
 
   const save = () => {
@@ -58,33 +59,49 @@ export default function HouseSettingsScreen() {
       <NavHeader title="House" onBack={() => router.back()} />
 
       <Overline style={{ marginBottom: space.sm }}>Name</Overline>
-      <TextInput value={name} onChangeText={setName} style={s.input} returnKeyType="done" />
+      {isOwner ? (
+        <TextInput value={name} onChangeText={setName} style={s.input} returnKeyType="done" />
+      ) : (
+        <Body>{house.name}</Body>
+      )}
 
       <Overline style={{ marginTop: space.lg, marginBottom: space.sm }}>Currency symbol</Overline>
-      <TextInput value={currency} onChangeText={setCurrency} style={[s.input, { width: 96 }]} maxLength={3} autoCapitalize="none" />
+      {isOwner ? (
+        <TextInput value={currency} onChangeText={setCurrency} style={[s.input, { width: 96 }]} maxLength={3} autoCapitalize="none" />
+      ) : (
+        <Body>{house.currencySymbol}</Body>
+      )}
 
-      <Button label="Save" size="md" onPress={save} disabled={!changed} style={{ marginTop: space.lg }} />
+      {isOwner ? (
+        <>
+          <Button label="Save" size="md" onPress={save} disabled={!changed} style={{ marginTop: space.lg }} />
 
-      {__DEV__ ? (
-        <Row style={{ marginTop: space.xl }}>
-          <Body style={{ flex: 1 }}>Preview as reader</Body>
-          <Switch value={preview} onValueChange={setPreview} trackColor={{ true: colors.accent }} />
-        </Row>
-      ) : null}
+          {__DEV__ ? (
+            <Row style={{ marginTop: space.xl }}>
+              <Body style={{ flex: 1 }}>Preview as reader</Body>
+              <Switch value={preview} onValueChange={setPreview} trackColor={{ true: colors.accent }} />
+            </Row>
+          ) : null}
 
-      <Button
-        label="Delete house"
-        variant="danger"
-        size="md"
-        onPress={confirmDelete}
-        disabled={houseCount <= 1}
-        style={{ marginTop: space.xxl }}
-      />
-      {houseCount <= 1 ? (
-        <Caption tone="muted" style={{ marginTop: space.sm }}>
-          You need at least one house. Create another before deleting this one.
+          <Button
+            label="Delete house"
+            variant="danger"
+            size="md"
+            onPress={confirmDelete}
+            disabled={houseCount <= 1}
+            style={{ marginTop: space.xxl }}
+          />
+          {houseCount <= 1 ? (
+            <Caption tone="muted" style={{ marginTop: space.sm }}>
+              You need at least one house. Create another before deleting this one.
+            </Caption>
+          ) : null}
+        </>
+      ) : (
+        <Caption tone="muted" style={{ marginTop: space.lg }}>
+          Only the owner can change this house.
         </Caption>
-      ) : null}
+      )}
     </Screen>
   );
 }

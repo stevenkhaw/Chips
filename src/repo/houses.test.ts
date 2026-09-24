@@ -1,6 +1,7 @@
 import { createTestDb } from '../../test/nodeDb';
 import {
-  createHouse, deleteHouse, getCurrentHouseId, getHouse, listHouses, renameHouse, setCurrentHouse, setHouseCurrency,
+  createHouse, deleteHouse, ensureCurrentHouse, getCurrentHouseId, getHouse, listHouses, renameHouse, setCurrentHouse,
+  setHouseCurrency,
 } from './houses';
 
 describe('houses repo', () => {
@@ -71,5 +72,39 @@ describe('houses repo', () => {
     const db = createTestDb();
     expect(() => deleteHouse(db, getCurrentHouseId(db))).toThrow('Cannot delete your only house');
     expect(() => deleteHouse(db, 'nope')).toThrow('House not found');
+  });
+
+  describe('ensureCurrentHouse', () => {
+    it('returns the current id unchanged when valid', () => {
+      const db = createTestDb();
+      const home = getCurrentHouseId(db);
+      expect(ensureCurrentHouse(db)).toBe(home);
+      expect(getCurrentHouseId(db)).toBe(home);
+    });
+
+    it('falls back to another house when the current one was soft-deleted', () => {
+      const db = createTestDb();
+      const home = getCurrentHouseId(db);
+      const work = createHouse(db, { name: 'Work', currencySymbol: '$' });
+      setCurrentHouse(db, work.id);
+      db.run('UPDATE houses SET deleted_at = 1 WHERE id = ?', [work.id]);
+
+      const id = ensureCurrentHouse(db);
+
+      expect(id).toBe(home);
+      expect(getCurrentHouseId(db)).toBe(home);
+    });
+
+    it('creates My House when every house was soft-deleted', () => {
+      const db = createTestDb();
+      const home = getCurrentHouseId(db);
+      db.run('UPDATE houses SET deleted_at = 1 WHERE id = ?', [home]);
+
+      const id = ensureCurrentHouse(db);
+
+      const house = getHouse(db, id);
+      expect(house).toEqual(expect.objectContaining({ name: 'My House', role: 'owner', currencySymbol: '$' }));
+      expect(getCurrentHouseId(db)).toBe(id);
+    });
   });
 });

@@ -1,5 +1,5 @@
 import { createTestDb } from '../../test/nodeDb';
-import { setDb } from '@/db/connection';
+import { getDb, setDb } from '@/db/connection';
 import { usePlayersStore } from './usePlayersStore';
 import { useSettingsStore } from './useSettingsStore';
 import { useSessionsStore } from './useSessionsStore';
@@ -138,6 +138,17 @@ describe('houses', () => {
     deleteHouse(work.id);
     expect(useHousesStore.getState().currentHouseId).toBe(home);
     expect(useHousesStore.getState().houses).toHaveLength(1);
+  });
+
+  it('reloadAll survives a deleted current house and lands on a live one', () => {
+    const currentId = useHousesStore.getState().currentHouseId!;
+    getDb().run('UPDATE houses SET deleted_at = 1 WHERE id = ?', [currentId]);
+
+    expect(() => reloadAll()).not.toThrow();
+
+    const newId = useHousesStore.getState().currentHouseId;
+    expect(newId).not.toBeNull();
+    expect(useHousesStore.getState().houses.some((h) => h.id === newId)).toBe(true);
   });
 
   it('selectCanEdit: owners edit, readers and reader-preview do not', () => {

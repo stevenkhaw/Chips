@@ -2,16 +2,16 @@ import React, { useState } from 'react';
 import { Pressable, StyleSheet, Text, type StyleProp, type ViewStyle } from 'react-native';
 import { Pill } from '@/components/ui';
 import { HouseSwitcherSheet } from '@/components/HouseSwitcherSheet';
-import { useCurrentHouse, useHousesStore } from '@/store/useHousesStore';
+import { useCanEdit, useCurrentHouse } from '@/store/useHousesStore';
 import { colors, space, textStyles } from '@/theme';
 
 /** Current house name + role. Tap to switch houses. */
 export function HouseBar({ style }: { style?: StyleProp<ViewStyle> }) {
   const house = useCurrentHouse();
-  const preview = useHousesStore((s) => s.previewAsReader);
+  const canEdit = useCanEdit();
   const [open, setOpen] = useState(false);
   if (!house) return null;
-  const viewing = house.role !== 'owner' || preview;
+  const viewing = !canEdit;
   return (
     <>
       <Pressable

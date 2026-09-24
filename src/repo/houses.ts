@@ -47,6 +47,26 @@ export function setCurrentHouse(db: Db, id: string): void {
   db.run("UPDATE settings SET current_house_id = ? WHERE id = 'default'", [id]);
 }
 
+/**
+ * Returns a valid current house id, repairing settings if the stored one is missing or was
+ * deleted (e.g. by sync). Falls back to another live house, or creates one if none remain.
+ */
+export function ensureCurrentHouse(db: Db): string {
+  const row = db.first<{ current_house_id: string | null }>("SELECT current_house_id FROM settings WHERE id = 'default'");
+  const currentId = row?.current_house_id ?? null;
+  if (currentId && getHouse(db, currentId)) return currentId;
+
+  const [live] = listHouses(db);
+  if (live) {
+    setCurrentHouse(db, live.id);
+    return live.id;
+  }
+
+  const house = createHouse(db, { name: 'My House', currencySymbol: '$' });
+  setCurrentHouse(db, house.id);
+  return house.id;
+}
+
 export function createHouse(db: Db, input: { name: string; currencySymbol: string }): House {
   const name = cleanName(input.name);
   const currencySymbol = cleanCurrency(input.currencySymbol);

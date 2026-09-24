@@ -3,12 +3,21 @@ import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Body, Button, Caption, NavHeader, Row, Screen, toastError } from '@/components/ui';
 import { PlayerChecklist } from '@/components/PlayerChecklist';
+import { EditorOnly } from '@/components/EditorOnly';
 import { useNewNightDraft } from '@/store/useNewNightDraft';
 import { usePlayersStore } from '@/store/usePlayersStore';
 import { useSessionsStore } from '@/store/useSessionsStore';
 import { colors, radius, space, textStyles } from '@/theme';
 
-export default function NewSessionStep2() {
+export default function NewSessionStep2Screen() {
+  return (
+    <EditorOnly fallback="/">
+      <NewSessionStep2 />
+    </EditorOnly>
+  );
+}
+
+function NewSessionStep2() {
   const router = useRouter();
   const draft = useNewNightDraft();
   const players = usePlayersStore((s) => s.players);
