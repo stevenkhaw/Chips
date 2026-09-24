@@ -23,6 +23,15 @@ select throws_ok(
   '42501', null, 'service_role cannot create houses');
 select throws_ok($$select public.join_house('AAAAAAAA', 'x')$$, '42501', null, 'service_role cannot join');
 
+-- authenticated with an empty sub: auth.uid() treats '' as null, same as no sub at all
+set local role authenticated;
+set local request.jwt.claim.sub = '';
+select throws_ok(
+  $$select * from public.create_house('dddddddd-dddd-dddd-dddd-dddddddddddd', 'X', '£', 'hunter22')$$,
+  'P0001', 'not_authenticated', 'create_house rejects an empty sub');
+select throws_ok($$select public.join_house('AAAAAAAA', 'x')$$,
+  'P0001', 'not_authenticated', 'join_house rejects an empty sub');
+
 -- create
 set local role authenticated;
 set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
@@ -64,17 +73,28 @@ select throws_ok(
   $$select * from public.create_house('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'Mine', '£', 'hunter22')$$,
   'P0001', 'forbidden', 'another user cannot take over a house id');
 
--- join by code: normalised input, new password
+-- join by code: normalised input, new password, and a display name
 select is(
-  (public.join_house(lower(substr(current_setting('test.code'), 1, 4) || '-' || substr(current_setting('test.code'), 5)), 'newpass1')) ->> 'ok',
+  (public.join_house(lower(substr(current_setting('test.code'), 1, 4) || '-' || substr(current_setting('test.code'), 5)), 'newpass1', 'Case')) ->> 'ok',
   'true', 'join_house accepts lower-case code with a hyphen');
+select is(
+  (public.join_house(lower(substr(current_setting('test.code'), 1, 4) || '-' || substr(current_setting('test.code'), 5)), 'newpass1')) ->> 'role',
+  'reader', 'a reader joining gets role reader');
 select results_eq($$select name from public.houses$$, array['Tuesday Crew'], 'the new reader sees the house');
+select results_eq(
+  $$select display_name from public.house_members where house_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa' and user_id = '00000000-0000-0000-0000-000000000002'$$,
+  array['Case'], 'a join with a name stores it');
 select is(
   (public.join_house(current_setting('test.code'), 'newpass1')) -> 'house' ->> 'id',
   'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'joining twice is harmless and returns the house');
+select results_eq(
+  $$select display_name from public.house_members where house_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa' and user_id = '00000000-0000-0000-0000-000000000002'$$,
+  array['Case'], 'a rejoin without a name keeps the old one');
 
 set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
 select is((public.join_house(current_setting('test.code'), 'newpass1')) ->> 'ok', 'true', 'owner can join their own house');
+select is((public.join_house(current_setting('test.code'), 'newpass1')) ->> 'role', 'owner',
+  'owner joining their own house keeps role owner, not reader');
 
 reset role;
 select results_eq(
@@ -82,6 +102,19 @@ select results_eq(
     where house_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa' order by user_id$$,
   $$values ('00000000-0000-0000-0000-000000000001', 'owner'), ('00000000-0000-0000-0000-000000000002', 'reader')$$,
   'one reader row added; owner keeps the owner role');
+select ok(
+  (select display_name is null from public.house_members
+    where house_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa' and user_id = '00000000-0000-0000-0000-000000000001'),
+  'create_house without a name leaves the owner display_name null');
+
+-- the owner can see every member's display name
+set local role authenticated;
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
+select results_eq(
+  $$select user_id::text, display_name from public.house_members
+    where house_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa' order by user_id$$,
+  $$values ('00000000-0000-0000-0000-000000000001', null::text), ('00000000-0000-0000-0000-000000000002', 'Case')$$,
+  'the owner can see the members'' names');
 
 -- lockout and identical errors (u3)
 set local role authenticated;

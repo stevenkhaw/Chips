@@ -27,9 +27,18 @@ language sql stable set search_path = '' as $$
   select (extract(epoch from now()) * 1000)::bigint;
 $$;
 
-revoke execute on function private.new_join_code(), private.new_invite_secret(), private.now_ms() from public;
+-- Trims a caller-supplied display name; blank becomes null so it never
+-- overwrites an existing name on conflict (coalesce(excluded, existing)).
+create function private.clean_display_name(p_name text) returns text
+language sql immutable set search_path = '' as $$
+  select nullif(btrim(p_name), '');
+$$;
 
-create function public.create_house(p_id uuid, p_name text, p_currency text, p_password text)
+revoke execute on function
+  private.new_join_code(), private.new_invite_secret(), private.now_ms(), private.clean_display_name(text)
+from public;
+
+create function public.create_house(p_id uuid, p_name text, p_currency text, p_password text, p_display_name text default null)
 returns table (join_code text, invite_secret text)
 language plpgsql security definer set search_path = '' as $$
 #variable_conflict use_column
@@ -64,7 +73,8 @@ begin
     end loop;
     insert into public.house_secrets (house_id, password_hash, invite_secret)
     values (p_id, extensions.crypt(p_password, extensions.gen_salt('bf', 8)), private.new_invite_secret());
-    insert into public.house_members (house_id, user_id, role) values (p_id, v_uid, 'owner');
+    insert into public.house_members (house_id, user_id, role, display_name)
+      values (p_id, v_uid, 'owner', private.clean_display_name(p_display_name));
   end if;
 
   return query
@@ -76,7 +86,7 @@ $$;
 
 -- Returns jsonb instead of raising: a raise would roll back the failed
 -- attempt row and the lockout could never count.
-create function public.join_house(p_code text, p_password text)
+create function public.join_house(p_code text, p_password text, p_display_name text default null)
 returns jsonb
 language plpgsql security definer set search_path = '' as $$
 #variable_conflict use_column
@@ -87,6 +97,7 @@ declare
   v_unlock timestamptz;
   v_house public.houses;
   v_hash text;
+  v_role text;
 begin
   if v_uid is null then raise exception 'not_authenticated'; end if;
   -- Serialise one user's attempts so parallel calls cannot slip past the lockout.
@@ -118,19 +129,24 @@ begin
   end if;
 
   insert into private.join_attempts (user_id, ok) values (v_uid, true);
-  insert into public.house_members (house_id, user_id, role) values (v_house.id, v_uid, 'reader')
-    on conflict (house_id, user_id) do nothing;
-  return jsonb_build_object('ok', true, 'house', to_jsonb(v_house));
+  insert into public.house_members (house_id, user_id, role, display_name)
+    values (v_house.id, v_uid, 'reader', private.clean_display_name(p_display_name))
+    on conflict (house_id, user_id) do update
+      set display_name = coalesce(excluded.display_name, public.house_members.display_name);
+  select m.role into v_role from public.house_members m
+    where m.house_id = v_house.id and m.user_id = v_uid;
+  return jsonb_build_object('ok', true, 'house', to_jsonb(v_house), 'role', v_role);
 end;
 $$;
 
-create function public.join_house_by_link(p_house_id uuid, p_secret text)
+create function public.join_house_by_link(p_house_id uuid, p_secret text, p_display_name text default null)
 returns jsonb
 language plpgsql security definer set search_path = '' as $$
 #variable_conflict use_column
 declare
   v_uid uuid := auth.uid();
   v_house public.houses;
+  v_role text;
 begin
   if v_uid is null then raise exception 'not_authenticated'; end if;
 
@@ -141,21 +157,25 @@ begin
     return jsonb_build_object('ok', false, 'error', 'invalid');
   end if;
 
-  insert into public.house_members (house_id, user_id, role) values (v_house.id, v_uid, 'reader')
-    on conflict (house_id, user_id) do nothing;
-  return jsonb_build_object('ok', true, 'house', to_jsonb(v_house));
+  insert into public.house_members (house_id, user_id, role, display_name)
+    values (v_house.id, v_uid, 'reader', private.clean_display_name(p_display_name))
+    on conflict (house_id, user_id) do update
+      set display_name = coalesce(excluded.display_name, public.house_members.display_name);
+  select m.role into v_role from public.house_members m
+    where m.house_id = v_house.id and m.user_id = v_uid;
+  return jsonb_build_object('ok', true, 'house', to_jsonb(v_house), 'role', v_role);
 end;
 $$;
 
 revoke execute on function
-  public.create_house(uuid, text, text, text),
-  public.join_house(text, text),
-  public.join_house_by_link(uuid, text)
+  public.create_house(uuid, text, text, text, text),
+  public.join_house(text, text, text),
+  public.join_house_by_link(uuid, text, text)
 from public, anon, service_role;
 grant execute on function
-  public.create_house(uuid, text, text, text),
-  public.join_house(text, text),
-  public.join_house_by_link(uuid, text)
+  public.create_house(uuid, text, text, text, text),
+  public.join_house(text, text, text),
+  public.join_house_by_link(uuid, text, text)
 to authenticated;
 
 create function public.reset_house_password(p_house_id uuid, p_password text)
@@ -183,14 +203,22 @@ begin
 end;
 $$;
 
+-- Rotates the invite link so a removed reader cannot rejoin with the old
+-- link secret. The owner should also reset the password (the app will
+-- prompt for that), since the join code plus password still work otherwise.
 create function public.remove_member(p_house_id uuid, p_user_id uuid)
-returns void
+returns text
 language plpgsql security definer set search_path = '' as $$
+declare
+  v_secret text;
 begin
   if not private.is_house_owner(p_house_id) then raise exception 'forbidden'; end if;
   if p_user_id = auth.uid() then raise exception 'owner_cannot_leave'; end if;
   delete from public.house_members m
     where m.house_id = p_house_id and m.user_id = p_user_id and m.role = 'reader';
+  v_secret := private.new_invite_secret();
+  update public.house_secrets s set invite_secret = v_secret where s.house_id = p_house_id;
+  return v_secret;
 end;
 $$;
 

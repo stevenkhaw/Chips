@@ -34,6 +34,7 @@ create table public.house_members (
   house_id uuid not null references public.houses (id),
   user_id uuid not null references auth.users (id) on delete cascade,
   role text not null check (role in ('owner', 'reader')),
+  display_name text check (display_name is null or char_length(display_name) between 1 and 40),
   joined_at timestamptz not null default now(),
   primary key (house_id, user_id)
 );

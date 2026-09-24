@@ -58,14 +58,29 @@ select is((public.join_house_by_link('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', cur
 set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000002';
 select results_eq($$select name from public.houses$$, array['Tuesday Crew'], 'rotating secrets keeps existing members');
 
--- owner removes a member; cannot remove themselves
+-- owner removes a member; the removal also rotates the invite link so the
+-- removed reader (or anyone else with the old link) cannot rejoin with it
 set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
-select lives_ok($$select public.remove_member('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '00000000-0000-0000-0000-000000000003')$$,
-  'owner removes a reader');
+select set_config('test.secret3',
+  (select public.remove_member('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '00000000-0000-0000-0000-000000000003')), true);
+select isnt(current_setting('test.secret3'), current_setting('test.secret2'), 'remove_member returns a new, different secret');
 select throws_ok($$select public.remove_member('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '00000000-0000-0000-0000-000000000001')$$,
   'P0001', 'owner_cannot_leave', 'owner cannot remove themselves');
 set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000003';
 select is_empty($$select * from public.houses$$, 'a removed reader loses access');
+select is(public.join_house_by_link('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', current_setting('test.secret2')),
+  '{"ok": false, "error": "invalid"}'::jsonb, 'u3 cannot rejoin with the old (pre-removal) link');
+
+-- a fresh user, not yet a member: the pre-removal secret is dead, the one
+-- remove_member returned works
+reset role;
+insert into auth.users (id, email) values ('00000000-0000-0000-0000-000000000006', 'u6@test.local');
+set local role authenticated;
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000006';
+select is(public.join_house_by_link('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', current_setting('test.secret2')),
+  '{"ok": false, "error": "invalid"}'::jsonb, 'the pre-removal link secret does not work for a fresh user');
+select is((public.join_house_by_link('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', current_setting('test.secret3'))) ->> 'ok',
+  'true', 'the secret returned by remove_member does work');
 
 -- leaving
 set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000002';
@@ -83,8 +98,8 @@ select results_eq($$select deleted_at from public.houses$$, array[99::bigint], '
 set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000003';
 select is(public.join_house(current_setting('test.code'), 'another1'),
   '{"ok": false, "error": "invalid"}'::jsonb, 'a deleted house cannot be joined by code');
-select is(public.join_house_by_link('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', current_setting('test.secret2')),
-  '{"ok": false, "error": "invalid"}'::jsonb, 'a deleted house cannot be joined by link');
+select is(public.join_house_by_link('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', current_setting('test.secret3')),
+  '{"ok": false, "error": "invalid"}'::jsonb, 'a deleted house cannot be joined by link, even with the current secret');
 
 -- anon
 set local role anon;

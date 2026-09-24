@@ -27,7 +27,7 @@
 ## Design notes (read before Task 2)
 
 1. **Join RPCs return `jsonb` instead of raising.** The spec says `join_house` "raises `locked`/`invalid`". A raise rolls back the whole call, including the `join_attempts` row that records the failure, so the lockout could never count. `join_house` and `join_house_by_link` therefore return:
-   - `{"ok": true, "house": { …houses row… }}`
+   - `{"ok": true, "house": { …houses row… }, "role": "owner" | "reader"}` — `role` is the caller's row in `house_members` *after* the insert, so an owner tapping their own invite gets `role: "owner"` instead of the app mistakenly storing them as a reader.
    - `{"ok": false, "error": "invalid"}`
    - `{"ok": false, "error": "locked", "minutes": <int>}`
 
@@ -1103,7 +1103,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 - Produces (callable by `authenticated` only; errors raise `P0001` with the message shown):
   - `public.reset_house_password(p_house_id uuid, p_password text) returns void` (`forbidden`, `weak_password`)
   - `public.reset_house_link(p_house_id uuid) returns text` (the new secret) (`forbidden`)
-  - `public.remove_member(p_house_id uuid, p_user_id uuid) returns void` (`forbidden`, `owner_cannot_leave`)
+  - `public.remove_member(p_house_id uuid, p_user_id uuid) returns text` (the rotated invite secret; `forbidden`, `owner_cannot_leave`) — deleting the membership alone would leave the old invite link live, so removal also rotates `house_secrets.invite_secret` and returns the new one. The owner should also reset the password; the app prompts for that.
   - `public.leave_house(p_house_id uuid) returns void` (`owner_cannot_leave`)
 
 - [ ] **Step 1: Write the failing test**
