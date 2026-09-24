@@ -10,6 +10,8 @@
     },
     "preview": {
       "distribution": "internal",
+      "environment": "production",
+      "autoIncrement": true,
       "ios": {
         "simulator": false
       },

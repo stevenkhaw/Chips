@@ -57,7 +57,8 @@
     "web": "expo start --web",
     "lint": "expo lint",
     "test": "jest",
-    "test:sync": "scripts/test-sync.sh"
+    "test:sync": "scripts/test-sync.sh",
+    "release": "scripts/release.sh"
   },
   "private": true
 }

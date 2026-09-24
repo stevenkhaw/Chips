@@ -29,8 +29,16 @@ Design system: `docs/design/stitch/felt_ledger/DESIGN.md` (screens: `docs/design
 
     npm install -g eas-cli
     eas login
-    eas build:configure
-    eas build --profile preview --platform ios      # or android → APK
+    eas build --profile preview --platform android   # APK; text the install link to testers
+
+## Release
+
+    npm run release
+
+Checks the tree is clean, runs the tests and typecheck, then queues two EAS builds: iOS
+(production, auto-submitted to TestFlight) and Android (preview APK). When the Android build
+finishes, text its install link to Android testers. Installing a newer APK over an old one keeps
+their data.
 
 ## Device checklist (not yet run)
 
