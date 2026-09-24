@@ -106,3 +106,6 @@ functions live in `supabase/migrations/`; pgTAP tests in `supabase/tests/`.
     supabase db reset     # re-apply every migration to the local database
     supabase test db      # run the pgTAP tests
     supabase db push      # apply new migrations to the hosted project (after `supabase link`)
+    npm run test:sync     # sync integration test against the local stack (needs `supabase start`)
+
+For Expo Go, copy `.env.example` to `.env.local` and fill in the hosted project URL and publishable key.
