@@ -1,4 +1,5 @@
 import type { Db } from './types';
+import { newId, now } from './ids';
 
 const BASE = `
   id TEXT PRIMARY KEY NOT NULL,
@@ -6,7 +7,55 @@ const BASE = `
   updated_at INTEGER NOT NULL,
   deleted_at INTEGER`;
 
-export const MIGRATIONS: string[] = [
+type Migration = string | ((db: Db) => void);
+
+/** Tables that belong to a house and will sync. */
+export const LEDGER_TABLES = ['players', 'sessions', 'session_players', 'buyins', 'payments'] as const;
+
+function hasColumn(db: Db, table: string, column: string): boolean {
+  return db.all<{ name: string }>(`PRAGMA table_info(${table})`).some((c) => c.name === column);
+}
+
+function addColumn(db: Db, table: string, column: string, decl: string): void {
+  if (!hasColumn(db, table, column)) db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${decl}`);
+}
+
+/** v3: houses. A function (not SQL) so re-running it is safe: ALTER TABLE ADD COLUMN is not idempotent. */
+function v3Houses(db: Db): void {
+  db.exec(`CREATE TABLE IF NOT EXISTS houses (${BASE},
+    name TEXT NOT NULL,
+    role TEXT NOT NULL DEFAULT 'owner',
+    join_code TEXT,
+    currency_symbol TEXT NOT NULL DEFAULT '$',
+    published INTEGER NOT NULL DEFAULT 0,
+    pull_cursor TEXT,
+    dirty INTEGER NOT NULL DEFAULT 1
+  );`);
+  for (const t of LEDGER_TABLES) {
+    addColumn(db, t, 'house_id', 'TEXT');
+    addColumn(db, t, 'dirty', 'INTEGER NOT NULL DEFAULT 1');
+    db.exec(`CREATE INDEX IF NOT EXISTS idx_${t}_house ON ${t}(house_id)`);
+  }
+  addColumn(db, 'settings', 'current_house_id', 'TEXT');
+
+  let houseId = db.first<{ id: string }>(
+    'SELECT id FROM houses WHERE deleted_at IS NULL ORDER BY created_at ASC LIMIT 1',
+  )?.id;
+  if (!houseId) {
+    houseId = newId();
+    const t = now();
+    const currency =
+      db.first<{ currency_symbol: string }>("SELECT currency_symbol FROM settings WHERE id = 'default'")?.currency_symbol ?? '$';
+    db.run(
+      "INSERT INTO houses (id, created_at, updated_at, deleted_at, name, role, currency_symbol) VALUES (?, ?, ?, NULL, 'My House', 'owner', ?)",
+      [houseId, t, t, currency],
+    );
+  }
+  for (const t of LEDGER_TABLES) db.run(`UPDATE ${t} SET house_id = ? WHERE house_id IS NULL`, [houseId]);
+  db.run("UPDATE settings SET current_house_id = ? WHERE id = 'default' AND current_house_id IS NULL", [houseId]);
+}
+
+export const MIGRATIONS: Migration[] = [
   // v1
   `
   CREATE TABLE IF NOT EXISTS players (${BASE},
@@ -59,14 +108,18 @@ export const MIGRATIONS: string[] = [
   );
   CREATE INDEX IF NOT EXISTS idx_payments_session ON payments(session_id);
   `,
+  // v3
+  v3Houses,
 ];
 
 export function migrate(db: Db): void {
   const row = db.first<{ user_version: number }>('PRAGMA user_version');
   const current = row?.user_version ?? 0;
   for (let v = current; v < MIGRATIONS.length; v++) {
+    const m = MIGRATIONS[v];
     db.transaction(() => {
-      db.exec(MIGRATIONS[v]);
+      if (typeof m === 'string') db.exec(m);
+      else m(db);
       db.exec(`PRAGMA user_version = ${v + 1}`);
     });
   }

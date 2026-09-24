@@ -2,10 +2,11 @@ import { DatabaseSync } from 'node:sqlite';
 import type { Db, SqlParam } from '@/db/types';
 import { migrate } from '@/db/schema';
 
-export function createTestDb(): Db {
+/** In-memory DB with no migrations applied. */
+export function createRawTestDb(): Db {
   const sqlite = new DatabaseSync(':memory:');
   sqlite.exec('PRAGMA foreign_keys = ON;');
-  const db: Db = {
+  return {
     exec: (sql) => sqlite.exec(sql),
     run: (sql, params: SqlParam[] = []) => {
       const r = sqlite.prepare(sql).run(...params);
@@ -25,6 +26,10 @@ export function createTestDb(): Db {
       }
     },
   };
+}
+
+export function createTestDb(): Db {
+  const db = createRawTestDb();
   migrate(db);
   return db;
 }
