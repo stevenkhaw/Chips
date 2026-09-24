@@ -2,23 +2,25 @@ import type { Db } from '@/db/types';
 import { newId, now } from '@/db/ids';
 import { mapRow } from '@/db/map';
 import type { ChipDenom, Settings } from '@/domain/types';
+import { getCurrentHouseId, setHouseCurrency } from './houses';
 
 export function getSettings(db: Db): Settings {
   const row = db.first<{ default_buyin_cents: number; currency_symbol: string }>(
-    "SELECT default_buyin_cents, currency_symbol FROM settings WHERE id = 'default'",
+    "SELECT s.default_buyin_cents, h.currency_symbol FROM settings s JOIN houses h ON h.id = s.current_house_id WHERE s.id = 'default'",
   );
   if (!row) throw new Error('Settings row missing');
   return { defaultBuyinCents: row.default_buyin_cents, currencySymbol: row.currency_symbol };
 }
 
+/** Default buy-in is device-wide; currency belongs to the current house. */
 export function updateSettings(db: Db, patch: Partial<Settings>): Settings {
-  const cur = getSettings(db);
-  const next = { ...cur, ...patch };
-  db.run("UPDATE settings SET default_buyin_cents = ?, currency_symbol = ? WHERE id = 'default'", [
-    next.defaultBuyinCents,
-    next.currencySymbol,
-  ]);
-  return next;
+  db.transaction(() => {
+    if (patch.defaultBuyinCents !== undefined) {
+      db.run("UPDATE settings SET default_buyin_cents = ? WHERE id = 'default'", [patch.defaultBuyinCents]);
+    }
+    if (patch.currencySymbol !== undefined) setHouseCurrency(db, getCurrentHouseId(db), patch.currencySymbol);
+  });
+  return getSettings(db);
 }
 
 const DENOM_COLS = 'id, created_at, updated_at, deleted_at, label, color_hex, value_cents, sort_order';

@@ -2,6 +2,7 @@ import { createTestDb } from '../../test/nodeDb';
 import {
   getSettings, updateSettings, listChipDenoms, createChipDenom, updateChipDenom, deleteChipDenom, reorderChipDenoms,
 } from './settings';
+import { createHouse, setCurrentHouse } from './houses';
 
 describe('settings', () => {
   it('reads seeded defaults', () => {
@@ -11,6 +12,15 @@ describe('settings', () => {
     const db = createTestDb();
     expect(updateSettings(db, { defaultBuyinCents: 5000 })).toEqual({ defaultBuyinCents: 5000, currencySymbol: '$' });
     expect(getSettings(db).defaultBuyinCents).toBe(5000);
+  });
+  it('currency follows the current house', () => {
+    const db = createTestDb();
+    const work = createHouse(db, { name: 'Work', currencySymbol: '€' });
+    expect(getSettings(db).currencySymbol).toBe('$');
+    setCurrentHouse(db, work.id);
+    expect(getSettings(db)).toEqual({ defaultBuyinCents: 2000, currencySymbol: '€' });
+    updateSettings(db, { currencySymbol: '¥' });
+    expect(db.first<{ currency_symbol: string }>('SELECT currency_symbol FROM houses WHERE id = ?', [work.id])?.currency_symbol).toBe('¥');
   });
 });
 
