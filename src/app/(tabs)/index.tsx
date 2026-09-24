@@ -8,6 +8,7 @@ import { NightRow } from '@/components/NightRow';
 import { HouseBar } from '@/components/HouseBar';
 import { useSessionsStore } from '@/store/useSessionsStore';
 import { useSettingsStore } from '@/store/useSettingsStore';
+import { useCanEdit } from '@/store/useHousesStore';
 import { formatCents } from '@/domain/money';
 import { colors, radius, space, textStyles } from '@/theme';
 
@@ -16,13 +17,20 @@ export default function Home() {
   const summaries = useSessionsStore((s) => s.summaries);
   const deleteSession = useSessionsStore((s) => s.deleteSession);
   const symbol = useSettingsStore((s) => s.settings.currencySymbol);
+  const canEdit = useCanEdit();
 
   const totalVolumeCents = summaries.reduce((sum, x) => sum + x.totalBuyinCents, 0);
   const hasNights = summaries.length > 0;
 
   const onLongPress = (id: string, title: string) => {
+    const share = { text: 'Share', onPress: () => router.push(`/session/${id}/settle?share=1`) };
+    const cancel = { text: 'Cancel', style: 'cancel' as const };
+    if (!canEdit) {
+      Alert.alert(title, undefined, [share, cancel]);
+      return;
+    }
     Alert.alert(title, undefined, [
-      { text: 'Share', onPress: () => router.push(`/session/${id}/settle?share=1`) },
+      share,
       {
         text: 'Delete',
         style: 'destructive',
@@ -42,7 +50,7 @@ export default function Home() {
             },
           ]),
       },
-      { text: 'Cancel', style: 'cancel' },
+      cancel,
     ]);
   };
 
@@ -52,8 +60,12 @@ export default function Home() {
         <ChipGlyph />
         <Headline style={s.wordmark}>CHIPS</Headline>
         <View style={{ flex: 1 }} />
-        <IconButton glyph="👤" onPress={() => router.push('/players')} accessibilityLabel="Players" variant="circle" />
-        <View style={{ width: space.sm }} />
+        {canEdit ? (
+          <>
+            <IconButton glyph="👤" onPress={() => router.push('/players')} accessibilityLabel="Players" variant="circle" />
+            <View style={{ width: space.sm }} />
+          </>
+        ) : null}
         <IconButton glyph="⚙︎" onPress={() => router.push('/settings')} accessibilityLabel="Settings" variant="circle" />
       </Row>
 
@@ -66,13 +78,15 @@ export default function Home() {
         </Row>
       ) : null}
 
-      <Card style={{ marginBottom: space.xl }}>
-        <Title>Ready to deal?</Title>
-        <Caption style={{ marginTop: space.xs, marginBottom: space.lg }}>
-          Start a new night, track buy-ins, calculate splits instantly.
-        </Caption>
-        <Button label="Start New Night" onPress={() => router.push('/new-session')} />
-      </Card>
+      {canEdit ? (
+        <Card style={{ marginBottom: space.xl }}>
+          <Title>Ready to deal?</Title>
+          <Caption style={{ marginTop: space.xs, marginBottom: space.lg }}>
+            Start a new night, track buy-ins, calculate splits instantly.
+          </Caption>
+          <Button label="Start New Night" onPress={() => router.push('/new-session')} />
+        </Card>
+      ) : null}
 
       {hasNights ? (
         <>
@@ -92,7 +106,7 @@ export default function Home() {
             ))}
           </View>
           <Caption tone="muted" style={{ marginTop: space.sm, marginLeft: space.xs }}>
-            Long-press a night to share or delete it.
+            {canEdit ? 'Long-press a night to share or delete it.' : 'Long-press a night to share it.'}
           </Caption>
         </>
       ) : (

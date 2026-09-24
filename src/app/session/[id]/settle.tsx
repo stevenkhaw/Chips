@@ -10,6 +10,7 @@ import { ShareCard, SHARE_CARD_WIDTH } from '@/components/ShareCard';
 import { buildShareText, captureAndShare, copyToClipboard } from '@/share';
 import { useSessionsStore } from '@/store/useSessionsStore';
 import { useSettingsStore } from '@/store/useSettingsStore';
+import { useCanEdit } from '@/store/useHousesStore';
 import { summarize } from '@/domain/nets';
 import { formatCents, formatSigned } from '@/domain/money';
 import { formatDate } from '@/date';
@@ -23,6 +24,7 @@ export default function SettleScreen() {
   const addPayment = useSessionsStore((s) => s.addPayment);
   const removePayment = useSessionsStore((s) => s.removePayment);
   const symbol = useSettingsStore((s) => s.settings.currencySymbol);
+  const canEdit = useCanEdit();
   const [showDetails, setShowDetails] = useState(false);
   const [paymentSheetVisible, setPaymentSheetVisible] = useState(false);
   const cardRef = useRef<View>(null);
@@ -210,19 +212,21 @@ export default function SettleScreen() {
                 toId={p.toPlayerId}
                 amountCents={p.amountCents}
                 note={p.note}
-                onDelete={() => removePaymentSafe(p.id)}
+                onDelete={canEdit ? () => removePaymentSafe(p.id) : undefined}
               />
             ))}
           </>
         ) : null}
 
-        <Button
-          label="+ Log a payment"
-          variant="secondary"
-          size="md"
-          onPress={() => setPaymentSheetVisible(true)}
-          style={{ marginTop: space.md }}
-        />
+        {canEdit ? (
+          <Button
+            label="+ Log a payment"
+            variant="secondary"
+            size="md"
+            onPress={() => setPaymentSheetVisible(true)}
+            style={{ marginTop: space.md }}
+          />
+        ) : null}
 
         <Row style={s.sectionHead}>
           <Overline>Still owed</Overline>
@@ -245,7 +249,7 @@ export default function SettleScreen() {
               toName={nameOf(t.to)}
               toId={t.to}
               amountCents={t.amountCents}
-              onMarkPaid={() => markPaid(t)}
+              onMarkPaid={canEdit ? () => markPaid(t) : undefined}
             />
           ))
         )}

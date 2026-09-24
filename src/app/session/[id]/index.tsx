@@ -11,6 +11,7 @@ import { AmountPad } from '@/components/AmountPad';
 import { ChipSheet } from '@/components/ChipSheet';
 import { ChipSetupSheet } from '@/components/ChipSetupSheet';
 import { PlayerChecklist } from '@/components/PlayerChecklist';
+import { EditorOnly } from '@/components/EditorOnly';
 import { useSessionsStore } from '@/store/useSessionsStore';
 import { useSettingsStore } from '@/store/useSettingsStore';
 import { usePlayersStore } from '@/store/usePlayersStore';
@@ -29,6 +30,15 @@ type PadState =
   | { kind: 'cashout'; spId: string; name: string; current: number | null };
 
 export default function SessionScreen() {
+  const { id } = useLocalSearchParams<{ id: string }>();
+  return (
+    <EditorOnly fallback={`/session/${id}/settle`}>
+      <SessionEditor />
+    </EditorOnly>
+  );
+}
+
+function SessionEditor() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const store = useSessionsStore();

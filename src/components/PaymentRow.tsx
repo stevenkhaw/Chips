@@ -19,7 +19,7 @@ export function PaymentRow({
   toId: string;
   amountCents: number;
   note?: string | null;
-  onDelete: () => void;
+  onDelete?: () => void;
 }) {
   const confirmDelete = () => {
     Alert.alert('Delete payment?', undefined, [
@@ -30,9 +30,9 @@ export function PaymentRow({
 
   return (
     <Pressable
-      onLongPress={confirmDelete}
+      onLongPress={onDelete ? confirmDelete : undefined}
       accessibilityRole="button"
-      accessibilityLabel={`${fromName} paid ${toName}. Long-press to delete`}
+      accessibilityLabel={onDelete ? `${fromName} paid ${toName}. Long-press to delete` : `${fromName} paid ${toName}`}
       style={({ pressed }) => [s.card, pressed && { backgroundColor: colors.cardAlt }]}>
       <Row>
         <Avatar name={fromName} playerId={fromId} size={28} />

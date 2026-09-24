@@ -7,6 +7,7 @@ import { BalanceChart } from '@/components/BalanceChart';
 import { HouseBar } from '@/components/HouseBar';
 import { useSessionsStore } from '@/store/useSessionsStore';
 import { useSettingsStore } from '@/store/useSettingsStore';
+import { useCanEdit } from '@/store/useHousesStore';
 import { buildHistory } from '@/domain/history';
 import { formatSigned } from '@/domain/money';
 import { formatDate } from '@/date';
@@ -20,6 +21,7 @@ export default function HistoryScreen() {
   const summaries = useSessionsStore((s) => s.summaries);
   const listDetails = useSessionsStore((s) => s.listDetails);
   const symbol = useSettingsStore((s) => s.settings.currencySymbol);
+  const canEdit = useCanEdit();
   // `summaries` is the change signal: every store mutation reloads it.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const history = useMemo(() => buildHistory(listDetails()), [summaries, listDetails]);
@@ -35,7 +37,7 @@ export default function HistoryScreen() {
           <Caption style={{ marginTop: space.xs, marginBottom: space.lg }}>
             Finish a night and everyone's running balance shows up here.
           </Caption>
-          <Button label="Start New Night" onPress={() => router.push('/new-session')} />
+          {canEdit ? <Button label="Start New Night" onPress={() => router.push('/new-session')} /> : null}
         </Card>
       </Screen>
     );

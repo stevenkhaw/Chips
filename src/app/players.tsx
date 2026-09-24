@@ -4,11 +4,20 @@ import { useRouter } from 'expo-router';
 import {
   Avatar, Body, Button, Caption, Divider, NavHeader, Overline, Row, Screen, toastError,
 } from '@/components/ui';
+import { EditorOnly } from '@/components/EditorOnly';
 import { usePlayersStore } from '@/store/usePlayersStore';
 import type { Player } from '@/domain/types';
 import { colors, radius, space, textStyles } from '@/theme';
 
 export default function PlayersScreen() {
+  return (
+    <EditorOnly fallback="/">
+      <PlayersEditor />
+    </EditorOnly>
+  );
+}
+
+function PlayersEditor() {
   const router = useRouter();
   const players = usePlayersStore((s) => s.players);
   const add = usePlayersStore((s) => s.add);

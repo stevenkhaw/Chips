@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Button, Caption, NavHeader, Overline, Row, Screen } from '@/components/ui';
 import { AmountPad } from '@/components/AmountPad';
+import { EditorOnly } from '@/components/EditorOnly';
 import { useNewNightDraft } from '@/store/useNewNightDraft';
 import { useSettingsStore } from '@/store/useSettingsStore';
 import { formatCents } from '@/domain/money';
@@ -12,7 +13,15 @@ import { colors, fonts, radius, space, textStyles } from '@/theme';
 
 const PRESETS = [1000, 2000, 5000];
 
-export default function NewSessionStep1() {
+export default function NewSessionScreen() {
+  return (
+    <EditorOnly fallback="/">
+      <NewSessionStep1 />
+    </EditorOnly>
+  );
+}
+
+function NewSessionStep1() {
   const router = useRouter();
   const settings = useSettingsStore((s) => s.settings);
   const draft = useNewNightDraft();
