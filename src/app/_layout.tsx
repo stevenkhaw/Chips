@@ -15,6 +15,9 @@ import { openExpoDb } from '@/db/expo-adapter';
 import { migrate } from '@/db/schema';
 import { setDb } from '@/db/connection';
 import { reloadAll } from '@/store/houseActions';
+import { startSync } from '@/store/syncActions';
+import { createAppSyncClient } from '@/sync/client';
+import { setSyncClient } from '@/sync/registry';
 import { colors, textStyles } from '@/theme';
 
 /**
@@ -57,6 +60,7 @@ export default function RootLayout() {
       setDb(db);
       reloadAll();
       setReady(true);
+      setSyncClient(createAppSyncClient());
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     }
@@ -65,6 +69,11 @@ export default function RootLayout() {
   useEffect(() => {
     if (fontError) console.warn('Font load failed, falling back to system fonts:', fontError);
   }, [fontError]);
+
+  useEffect(() => {
+    if (!ready) return;
+    return startSync();
+  }, [ready]);
 
   if (error) {
     return (
