@@ -284,10 +284,15 @@ describeIt('sync against local Supabase', () => {
     const r3Db = createTestDb();
     const r3 = newClient();
     await joinByCode(r3Db, r3, joinCode, 'hunter22');
+    const ownerSnapshotBeforeDelete = snapshot(ownerDb, house.id);
     deleteHouse(ownerDb, house.id); // owner db still has My House, so deleting is allowed
     await pushHouse(ownerDb, owner, house.id);
     expect(await pullHouse(r3Db, r3, house.id)).toBe('closed');
     expect(getHouse(r3Db, house.id)?.closed).toBe(true);
+    // The reader keeps its copy of the house's history: a published delete only removes the house
+    // row on the owner's phone, so the reader's players and nights are untouched by the pull.
+    expect(snapshot(r3Db, house.id)).toEqual(ownerSnapshotBeforeDelete);
+    expect(snapshot(r3Db, house.id).sessions.length).toBeGreaterThan(0);
   });
 
   it('the owner joining their own code keeps owner role and pulls nothing', async () => {

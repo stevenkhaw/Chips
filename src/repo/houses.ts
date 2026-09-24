@@ -102,15 +102,25 @@ export function setHouseCurrency(db: Db, id: string, symbol: string): void {
   if (r.changes === 0) throw new Error('House not found');
 }
 
-/** Soft-deletes the house and everything in it. If it was current, another house becomes current. */
+/**
+ * Soft-deletes the house. If it was current, another house becomes current.
+ *
+ * A published (shared or joined) house soft-deletes only the house row: friends keep a read-only
+ * copy of their players and nights (Steven's decision), and those local ledger rows are hidden
+ * anyway since a deleted house is never listed or current. An unpublished house has no one else
+ * to keep history for, so it still cascades the delete to its players and sessions.
+ */
 export function deleteHouse(db: Db, id: string): void {
-  if (!getHouse(db, id)) throw new Error('House not found');
+  const house = getHouse(db, id);
+  if (!house) throw new Error('House not found');
   const others = listHouses(db).filter((h) => h.id !== id);
   if (others.length === 0) throw new Error('Cannot delete your only house');
   const t = now();
   db.transaction(() => {
-    for (const table of HOUSE_TABLES_CHILD_FIRST) {
-      db.run(`UPDATE ${table} SET deleted_at = ?, updated_at = ?, dirty = 1 WHERE house_id = ? AND deleted_at IS NULL`, [t, t, id]);
+    if (!house.published) {
+      for (const table of HOUSE_TABLES_CHILD_FIRST) {
+        db.run(`UPDATE ${table} SET deleted_at = ?, updated_at = ?, dirty = 1 WHERE house_id = ? AND deleted_at IS NULL`, [t, t, id]);
+      }
     }
     db.run('UPDATE houses SET deleted_at = ?, updated_at = ?, dirty = 1 WHERE id = ?', [t, t, id]);
     if (getCurrentHouseId(db) === id) db.run("UPDATE settings SET current_house_id = ? WHERE id = 'default'", [others[0].id]);

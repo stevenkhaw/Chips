@@ -3,6 +3,7 @@ import {
   createHouse, deleteHouse, ensureCurrentHouse, getCurrentHouseId, getHouse, listHouses, renameHouse, setCurrentHouse,
   setHouseCurrency,
 } from './houses';
+import { markPublished } from './sync';
 
 describe('houses repo', () => {
   it('starts with My House as current', () => {
@@ -66,6 +67,27 @@ describe('houses repo', () => {
     expect(getCurrentHouseId(db)).toBe(home);
     expect(db.first<{ deleted_at: number | null }>("SELECT deleted_at FROM players WHERE id = 'p1'")?.deleted_at).not.toBeNull();
     expect(db.first<{ deleted_at: number | null }>("SELECT deleted_at FROM sessions WHERE id = 's1'")?.deleted_at).not.toBeNull();
+  });
+
+  it('deleting a published house keeps friends’ history: only the house row is soft-deleted', () => {
+    const db = createTestDb();
+    const home = getCurrentHouseId(db);
+    const work = createHouse(db, { name: 'Work', currencySymbol: '$' });
+    markPublished(db, work.id, 'ABCDEFGH');
+    setCurrentHouse(db, work.id);
+    db.run("INSERT INTO players (id, created_at, updated_at, name, house_id) VALUES ('p2', 1, 1, 'Bo', ?)", [work.id]);
+    db.run("INSERT INTO sessions (id, created_at, updated_at, date, default_buyin_cents, house_id) VALUES ('s2', 1, 1, '2026-09-01', 2000, ?)", [work.id]);
+
+    deleteHouse(db, work.id);
+
+    expect(getHouse(db, work.id)).toBeNull();
+    expect(listHouses(db).map((h) => h.id)).toEqual([home]);
+    expect(getCurrentHouseId(db)).toBe(home);
+    expect(db.first<{ deleted_at: number | null }>("SELECT deleted_at FROM players WHERE id = 'p2'")?.deleted_at).toBeNull();
+    expect(db.first<{ deleted_at: number | null }>("SELECT deleted_at FROM sessions WHERE id = 's2'")?.deleted_at).toBeNull();
+    expect(db.first<{ deleted_at: number | null; dirty: number }>('SELECT deleted_at, dirty FROM houses WHERE id = ?', [work.id])).toEqual(
+      { deleted_at: expect.any(Number), dirty: 1 },
+    );
   });
 
   it('refuses to delete the only house', () => {

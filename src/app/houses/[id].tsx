@@ -55,7 +55,7 @@ export default function HouseSettingsScreen() {
     Alert.alert(
       `Delete "${house.name}"?`,
       house.published
-        ? 'Its players and nights are deleted too. Friends will see it as closed. This cannot be undone.'
+        ? 'Its players and nights are removed from this phone. Friends keep a read-only copy marked closed. This cannot be undone.'
         : 'Its players and nights are deleted too. This cannot be undone.',
       [
         { text: 'Cancel', style: 'cancel' },
