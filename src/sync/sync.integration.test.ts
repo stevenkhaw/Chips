@@ -8,14 +8,17 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { ensureSession } from './remote';
 import type { Db } from '@/db/types';
 import { createTestDb } from '../../test/nodeDb';
-import { createHouse, getCurrentHouseId } from '@/repo/houses';
-import { createPlayer } from '@/repo/players';
-import { addBuyin, addPayment, createSession, removeBuyin, setCashout } from '@/repo/sessions';
+import { createHouse, deleteHouse, getCurrentHouseId, getHouse } from '@/repo/houses';
+import { createPlayer, renamePlayer } from '@/repo/players';
+import { addBuyin, addPayment, createSession, deleteSession, removeBuyin, setCashout } from '@/repo/sessions';
 import { SYNC_COLUMNS, pendingCount, type SyncTable } from '@/repo/sync';
 import { LEDGER_TABLES } from '@/db/schema';
 import { publishHouse } from './publish';
 import { pushHouse } from './push';
 import * as remote from './remote';
+import { rpcLeaveHouse, rpcRemoveMember, upsertRows, PAGE_SIZE } from './remote';
+import { joinByCode } from './join';
+import { pullHouse } from './pull';
 
 const URL = process.env.CHIPS_SUPABASE_URL;
 const KEY = process.env.CHIPS_SUPABASE_KEY;
@@ -159,5 +162,115 @@ describeIt('sync against local Supabase', () => {
     expect(b.inviteSecret).toBe(a.inviteSecret);
     expect(pendingCount(db, house.id)).toBe(0);
     expect(await serverSnapshot(owner, house.id)).toEqual(snapshot(db, house.id));
+  });
+
+  it('a reader joins by code and gets the same ledger', async () => {
+    const ownerDb = createTestDb();
+    const owner = newClient();
+    const { house } = seedHouse(ownerDb);
+    const { joinCode } = await publishHouse(ownerDb, owner, house.id, 'hunter22');
+
+    const readerDb = createTestDb();
+    const reader = newClient();
+    const typed = `${joinCode.slice(0, 4).toLowerCase()}-${joinCode.slice(4)}`;
+    expect(await joinByCode(readerDb, reader, typed, 'hunter22', 'Rae')).toEqual({ ok: true, houseId: house.id, role: 'reader' });
+    expect(snapshot(readerDb, house.id)).toEqual(snapshot(ownerDb, house.id));
+    expect(getHouse(readerDb, house.id)).toEqual(
+      expect.objectContaining({ name: 'IT Crew', currencySymbol: '£', role: 'reader', published: true, joinCode }),
+    );
+  });
+
+  it('wrong code and wrong password give the same answer', async () => {
+    const ownerDb = createTestDb();
+    const { house } = seedHouse(ownerDb);
+    const { joinCode } = await publishHouse(ownerDb, newClient(), house.id, 'hunter22');
+    const reader = newClient();
+    const db = createTestDb();
+    const badPw = await joinByCode(db, reader, joinCode, 'nope');
+    const badCode = await joinByCode(db, reader, 'ZZZZZZZZ', 'hunter22');
+    expect(badPw).toEqual({ ok: false, error: 'invalid' });
+    expect(badCode).toEqual(badPw);
+  });
+
+  it('pulls later edits, soft deletes and renames incrementally', async () => {
+    const ownerDb = createTestDb();
+    const owner = newClient();
+    const { house, ann, night } = seedHouse(ownerDb);
+    const { joinCode } = await publishHouse(ownerDb, owner, house.id, 'hunter22');
+    const readerDb = createTestDb();
+    const reader = newClient();
+    await joinByCode(readerDb, reader, joinCode, 'hunter22');
+
+    renamePlayer(ownerDb, ann.id, 'Annie');
+    deleteSession(ownerDb, night.id);
+    ownerDb.run("UPDATE houses SET name = 'Tuesday', updated_at = updated_at + 1, dirty = 1 WHERE id = ?", [house.id]);
+    await pushHouse(ownerDb, owner, house.id);
+
+    expect(await pullHouse(readerDb, reader, house.id)).toBe('ok');
+    expect(snapshot(readerDb, house.id)).toEqual(snapshot(ownerDb, house.id));
+    expect(getHouse(readerDb, house.id)?.name).toBe('Tuesday');
+    expect(await pullHouse(readerDb, reader, house.id)).toBe('ok'); // idempotent
+    expect(snapshot(readerDb, house.id)).toEqual(snapshot(ownerDb, house.id));
+  });
+
+  it('pages through more rows than one page', async () => {
+    const ownerDb = createTestDb();
+    const owner = newClient();
+    const house = createHouse(ownerDb, { name: 'Big', currencySymbol: '$' });
+    for (let i = 0; i < PAGE_SIZE + 20; i++) createPlayer(ownerDb, house.id, `P${i}`);
+    const { joinCode } = await publishHouse(ownerDb, owner, house.id, 'hunter22');
+    const readerDb = createTestDb();
+    await joinByCode(readerDb, newClient(), joinCode, 'hunter22');
+    expect(snapshot(readerDb, house.id).players).toHaveLength(PAGE_SIZE + 20);
+  });
+
+  it('a reader cannot write to the server', async () => {
+    const ownerDb = createTestDb();
+    const { house, ann } = seedHouse(ownerDb);
+    const { joinCode } = await publishHouse(ownerDb, newClient(), house.id, 'hunter22');
+    const reader = newClient();
+    await joinByCode(createTestDb(), reader, joinCode, 'hunter22');
+    await expect(
+      upsertRows(reader, 'players', [
+        { ...(snapshot(ownerDb, house.id).players.find((p) => (p as { id: string }).id === ann.id) as Record<string, unknown>), name: 'Hacked' } as never,
+      ]),
+    ).rejects.toEqual(expect.objectContaining({ code: '42501' }));
+  });
+
+  it('removed and left readers get "removed"; a deleted house reads "closed"', async () => {
+    const ownerDb = createTestDb();
+    const owner = newClient();
+    const { house } = seedHouse(ownerDb);
+    const { joinCode } = await publishHouse(ownerDb, owner, house.id, 'hunter22');
+
+    const r1Db = createTestDb();
+    const r1 = newClient();
+    await joinByCode(r1Db, r1, joinCode, 'hunter22');
+    const r1Id = await ensureSession(r1);
+    await rpcRemoveMember(owner, house.id, r1Id);
+    expect(await pullHouse(r1Db, r1, house.id)).toBe('removed');
+
+    const r2Db = createTestDb();
+    const r2 = newClient();
+    await joinByCode(r2Db, r2, joinCode, 'hunter22');
+    await rpcLeaveHouse(r2, house.id);
+    expect(await pullHouse(r2Db, r2, house.id)).toBe('removed');
+
+    const r3Db = createTestDb();
+    const r3 = newClient();
+    await joinByCode(r3Db, r3, joinCode, 'hunter22');
+    deleteHouse(ownerDb, house.id); // owner db still has My House, so deleting is allowed
+    await pushHouse(ownerDb, owner, house.id);
+    expect(await pullHouse(r3Db, r3, house.id)).toBe('closed');
+    expect(getHouse(r3Db, house.id)?.closed).toBe(true);
+  });
+
+  it('the owner joining their own code keeps owner role and pulls nothing', async () => {
+    const db = createTestDb();
+    const owner = newClient();
+    const { house } = seedHouse(db);
+    const { joinCode } = await publishHouse(db, owner, house.id, 'hunter22');
+    expect(await joinByCode(db, owner, joinCode, 'hunter22')).toEqual({ ok: true, houseId: house.id, role: 'owner' });
+    expect(pendingCount(db, house.id)).toBe(0);
   });
 });
