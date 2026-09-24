@@ -22,13 +22,13 @@ function getSession(db: Db, id: string): Session | null {
   return row ? mapRow<Session>(row) : null;
 }
 
-export function createSession(db: Db, input: CreateSessionInput): Session {
+export function createSession(db: Db, houseId: string, input: CreateSessionInput): Session {
   const id = newId();
   const t = now();
   db.transaction(() => {
     db.run(
-      'INSERT INTO sessions (id, created_at, updated_at, deleted_at, date, title, default_buyin_cents, notes) VALUES (?, ?, ?, NULL, ?, ?, ?, NULL)',
-      [id, t, t, input.date, input.title, input.defaultBuyinCents],
+      'INSERT INTO sessions (id, created_at, updated_at, deleted_at, date, title, default_buyin_cents, notes, house_id, dirty) VALUES (?, ?, ?, NULL, ?, ?, ?, NULL, ?, 1)',
+      [id, t, t, input.date, input.title, input.defaultBuyinCents, houseId],
     );
     input.playerIds.forEach((pid, i) => insertSessionPlayer(db, id, pid, i, t));
   });
@@ -38,8 +38,8 @@ export function createSession(db: Db, input: CreateSessionInput): Session {
 function insertSessionPlayer(db: Db, sessionId: string, playerId: string, sortOrder: number, t: number): SessionPlayer {
   const id = newId();
   db.run(
-    'INSERT INTO session_players (id, created_at, updated_at, deleted_at, session_id, player_id, cashout_cents, sort_order) VALUES (?, ?, ?, NULL, ?, ?, NULL, ?)',
-    [id, t, t, sessionId, playerId, sortOrder],
+    'INSERT INTO session_players (id, created_at, updated_at, deleted_at, session_id, player_id, cashout_cents, sort_order, house_id, dirty) VALUES (?, ?, ?, NULL, ?, ?, NULL, ?, (SELECT house_id FROM sessions WHERE id = ?), 1)',
+    [id, t, t, sessionId, playerId, sortOrder, sessionId],
   );
   return { id, createdAt: t, updatedAt: t, deletedAt: null, sessionId, playerId, cashoutCents: null, sortOrder };
 }
@@ -52,21 +52,22 @@ export function updateSession(
   const cur = getSession(db, id);
   if (!cur) throw new Error('Session not found');
   const next = { ...cur, ...patch };
-  db.run('UPDATE sessions SET date = ?, title = ?, default_buyin_cents = ?, notes = ?, updated_at = ? WHERE id = ? AND deleted_at IS NULL', [
-    next.date, next.title, next.defaultBuyinCents, next.notes, now(), id,
-  ]);
+  db.run(
+    'UPDATE sessions SET date = ?, title = ?, default_buyin_cents = ?, notes = ?, updated_at = ?, dirty = 1 WHERE id = ? AND deleted_at IS NULL',
+    [next.date, next.title, next.defaultBuyinCents, next.notes, now(), id],
+  );
 }
 
 export function deleteSession(db: Db, id: string): void {
   const t = now();
   db.transaction(() => {
     db.run(
-      'UPDATE buyins SET deleted_at = ?, updated_at = ? WHERE deleted_at IS NULL AND session_player_id IN (SELECT id FROM session_players WHERE session_id = ?)',
+      'UPDATE buyins SET deleted_at = ?, updated_at = ?, dirty = 1 WHERE deleted_at IS NULL AND session_player_id IN (SELECT id FROM session_players WHERE session_id = ?)',
       [t, t, id],
     );
-    db.run('UPDATE session_players SET deleted_at = ?, updated_at = ? WHERE deleted_at IS NULL AND session_id = ?', [t, t, id]);
-    db.run('UPDATE payments SET deleted_at = ?, updated_at = ? WHERE deleted_at IS NULL AND session_id = ?', [t, t, id]);
-    db.run('UPDATE sessions SET deleted_at = ?, updated_at = ? WHERE id = ? AND deleted_at IS NULL', [t, t, id]);
+    db.run('UPDATE session_players SET deleted_at = ?, updated_at = ?, dirty = 1 WHERE deleted_at IS NULL AND session_id = ?', [t, t, id]);
+    db.run('UPDATE payments SET deleted_at = ?, updated_at = ?, dirty = 1 WHERE deleted_at IS NULL AND session_id = ?', [t, t, id]);
+    db.run('UPDATE sessions SET deleted_at = ?, updated_at = ?, dirty = 1 WHERE id = ? AND deleted_at IS NULL', [t, t, id]);
   });
 }
 
@@ -92,17 +93,23 @@ export function getSessionDetail(db: Db, id: string): SessionDetail | null {
   return { session, players, payments };
 }
 
-/** Every non-deleted session with full detail, oldest first (history/graphs). */
-export function listSessionDetails(db: Db): SessionDetail[] {
+/** Every non-deleted session in the house with full detail, oldest first (history/graphs). */
+export function listSessionDetails(db: Db, houseId: string): SessionDetail[] {
   return db
-    .all<Record<string, unknown>>(`SELECT ${S_COLS} FROM sessions WHERE deleted_at IS NULL ORDER BY date ASC, created_at ASC`)
+    .all<Record<string, unknown>>(
+      `SELECT ${S_COLS} FROM sessions WHERE deleted_at IS NULL AND house_id = ? ORDER BY date ASC, created_at ASC`,
+      [houseId],
+    )
     .map((r) => mapRow<Session>(r))
     .map((session) => getSessionDetail(db, session.id)!);
 }
 
-export function listSessionSummaries(db: Db): SessionSummary[] {
+export function listSessionSummaries(db: Db, houseId: string): SessionSummary[] {
   const sessions = db
-    .all<Record<string, unknown>>(`SELECT ${S_COLS} FROM sessions WHERE deleted_at IS NULL ORDER BY date DESC, created_at DESC`)
+    .all<Record<string, unknown>>(
+      `SELECT ${S_COLS} FROM sessions WHERE deleted_at IS NULL AND house_id = ? ORDER BY date DESC, created_at DESC`,
+      [houseId],
+    )
     .map((r) => mapRow<Session>(r));
   return sessions.map((session) => {
     const detail = getSessionDetail(db, session.id)!;
@@ -132,14 +139,14 @@ export function addPlayerToSession(db: Db, sessionId: string, playerId: string):
 export function removePlayerFromSession(db: Db, sessionPlayerId: string): void {
   const t = now();
   db.transaction(() => {
-    db.run('UPDATE buyins SET deleted_at = ?, updated_at = ? WHERE deleted_at IS NULL AND session_player_id = ?', [t, t, sessionPlayerId]);
-    db.run('UPDATE session_players SET deleted_at = ?, updated_at = ? WHERE id = ? AND deleted_at IS NULL', [t, t, sessionPlayerId]);
+    db.run('UPDATE buyins SET deleted_at = ?, updated_at = ?, dirty = 1 WHERE deleted_at IS NULL AND session_player_id = ?', [t, t, sessionPlayerId]);
+    db.run('UPDATE session_players SET deleted_at = ?, updated_at = ?, dirty = 1 WHERE id = ? AND deleted_at IS NULL', [t, t, sessionPlayerId]);
   });
 }
 
 export function setCashout(db: Db, sessionPlayerId: string, cents: number | null): void {
   if (cents !== null && (!Number.isInteger(cents) || cents < 0)) throw new Error('Amount must be non-negative');
-  db.run('UPDATE session_players SET cashout_cents = ?, updated_at = ? WHERE id = ? AND deleted_at IS NULL', [cents, now(), sessionPlayerId]);
+  db.run('UPDATE session_players SET cashout_cents = ?, updated_at = ?, dirty = 1 WHERE id = ? AND deleted_at IS NULL', [cents, now(), sessionPlayerId]);
 }
 
 export function addBuyin(db: Db, sessionPlayerId: string, amountCents: number): Buyin {
@@ -147,20 +154,20 @@ export function addBuyin(db: Db, sessionPlayerId: string, amountCents: number): 
   const id = newId();
   const t = now();
   db.run(
-    'INSERT INTO buyins (id, created_at, updated_at, deleted_at, session_player_id, amount_cents, at) VALUES (?, ?, ?, NULL, ?, ?, ?)',
-    [id, t, t, sessionPlayerId, amountCents, t],
+    'INSERT INTO buyins (id, created_at, updated_at, deleted_at, session_player_id, amount_cents, at, house_id, dirty) VALUES (?, ?, ?, NULL, ?, ?, ?, (SELECT house_id FROM session_players WHERE id = ?), 1)',
+    [id, t, t, sessionPlayerId, amountCents, t, sessionPlayerId],
   );
   return { id, createdAt: t, updatedAt: t, deletedAt: null, sessionPlayerId, amountCents, at: t };
 }
 
 export function updateBuyin(db: Db, buyinId: string, amountCents: number): void {
   if (!Number.isInteger(amountCents) || amountCents <= 0) throw new Error('Amount must be positive');
-  db.run('UPDATE buyins SET amount_cents = ?, updated_at = ? WHERE id = ? AND deleted_at IS NULL', [amountCents, now(), buyinId]);
+  db.run('UPDATE buyins SET amount_cents = ?, updated_at = ?, dirty = 1 WHERE id = ? AND deleted_at IS NULL', [amountCents, now(), buyinId]);
 }
 
 export function removeBuyin(db: Db, buyinId: string): void {
   const t = now();
-  db.run('UPDATE buyins SET deleted_at = ?, updated_at = ? WHERE id = ? AND deleted_at IS NULL', [t, t, buyinId]);
+  db.run('UPDATE buyins SET deleted_at = ?, updated_at = ?, dirty = 1 WHERE id = ? AND deleted_at IS NULL', [t, t, buyinId]);
 }
 
 export function addPayment(
@@ -174,8 +181,8 @@ export function addPayment(
   const t = now();
   const note = input.note ?? null;
   db.run(
-    'INSERT INTO payments (id, created_at, updated_at, deleted_at, session_id, from_player_id, to_player_id, amount_cents, note, at) VALUES (?, ?, ?, NULL, ?, ?, ?, ?, ?, ?)',
-    [id, t, t, sessionId, input.fromPlayerId, input.toPlayerId, input.amountCents, note, t],
+    'INSERT INTO payments (id, created_at, updated_at, deleted_at, session_id, from_player_id, to_player_id, amount_cents, note, at, house_id, dirty) VALUES (?, ?, ?, NULL, ?, ?, ?, ?, ?, ?, (SELECT house_id FROM sessions WHERE id = ?), 1)',
+    [id, t, t, sessionId, input.fromPlayerId, input.toPlayerId, input.amountCents, note, t, sessionId],
   );
   return {
     id, createdAt: t, updatedAt: t, deletedAt: null,
@@ -185,11 +192,14 @@ export function addPayment(
 
 export function removePayment(db: Db, paymentId: string): void {
   const t = now();
-  db.run('UPDATE payments SET deleted_at = ?, updated_at = ? WHERE id = ? AND deleted_at IS NULL', [t, t, paymentId]);
+  db.run('UPDATE payments SET deleted_at = ?, updated_at = ?, dirty = 1 WHERE id = ? AND deleted_at IS NULL', [t, t, paymentId]);
 }
 
-export function lastSessionPlayerIds(db: Db): string[] {
-  const last = db.first<{ id: string }>('SELECT id FROM sessions WHERE deleted_at IS NULL ORDER BY date DESC, created_at DESC LIMIT 1');
+export function lastSessionPlayerIds(db: Db, houseId: string): string[] {
+  const last = db.first<{ id: string }>(
+    'SELECT id FROM sessions WHERE deleted_at IS NULL AND house_id = ? ORDER BY date DESC, created_at DESC LIMIT 1',
+    [houseId],
+  );
   if (!last) return [];
   return db
     .all<{ player_id: string }>('SELECT player_id FROM session_players WHERE session_id = ? AND deleted_at IS NULL ORDER BY sort_order ASC', [last.id])

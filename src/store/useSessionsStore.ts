@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { getDb } from '@/db/connection';
+import { getCurrentHouseId } from '@/repo/houses';
 import type { Session, SessionDetail, SessionSummary } from '@/domain/types';
 import * as repo from '@/repo/sessions';
 import { buildHistory } from '@/domain/history';
@@ -33,7 +34,11 @@ interface SessionsState {
 export const useSessionsStore = create<SessionsState>((set, get) => {
   const loadSummaries = () => {
     const db = getDb();
-    set({ summaries: repo.listSessionSummaries(db), playerColors: playerColors(buildHistory(repo.listSessionDetails(db))) });
+    const houseId = getCurrentHouseId(db);
+    set({
+      summaries: repo.listSessionSummaries(db, houseId),
+      playerColors: playerColors(buildHistory(repo.listSessionDetails(db, houseId))),
+    });
   };
   const refreshDetail = () => {
     const id = get().detail?.session.id;
@@ -51,7 +56,8 @@ export const useSessionsStore = create<SessionsState>((set, get) => {
     detail: null,
     loadSummaries,
     create: (input) => {
-      const s = repo.createSession(getDb(), input);
+      const db = getDb();
+      const s = repo.createSession(db, getCurrentHouseId(db), input);
       loadSummaries();
       return s;
     },
@@ -100,7 +106,13 @@ export const useSessionsStore = create<SessionsState>((set, get) => {
       repo.removePayment(getDb(), id);
       refreshDetail();
     },
-    listDetails: () => repo.listSessionDetails(getDb()),
-    lastPlayerIds: () => repo.lastSessionPlayerIds(getDb()),
+    listDetails: () => {
+      const db = getDb();
+      return repo.listSessionDetails(db, getCurrentHouseId(db));
+    },
+    lastPlayerIds: () => {
+      const db = getDb();
+      return repo.lastSessionPlayerIds(db, getCurrentHouseId(db));
+    },
   };
 });
