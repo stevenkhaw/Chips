@@ -85,6 +85,9 @@ alter table private.join_attempts enable row level security;
 
 revoke all on public.houses, public.house_secrets, public.house_members from anon, authenticated;
 revoke all on private.join_attempts from public, anon, authenticated;
+-- service_role (the admin key) bypasses RLS by design and keeps its other
+-- privileges, but no role other than the table owner may delete these rows.
+revoke delete, truncate on public.houses, public.house_secrets, public.house_members from service_role;
 grant select on public.houses, public.house_secrets, public.house_members to authenticated;
 -- Only these columns: code, owner and ids never change through the API.
 grant update (name, currency_symbol, updated_at, deleted_at) on public.houses to authenticated;

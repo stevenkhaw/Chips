@@ -71,6 +71,12 @@ select throws_ok($$update public.house_secrets set invite_secret = 'mine'$$,
   '42501', null, 'secrets change only through RPCs');
 select throws_ok($$delete from public.houses$$, '42501', null, 'owner cannot hard-delete a house');
 
+-- service_role bypasses RLS by design but must not be able to delete rows
+set local role service_role;
+select throws_ok($$delete from public.houses$$, '42501', null, 'service_role cannot delete houses');
+select throws_ok($$delete from public.house_members$$, '42501', null, 'service_role cannot delete house members');
+select throws_ok($$truncate public.house_secrets$$, '42501', null, 'service_role cannot truncate house_secrets');
+
 reset role;
 select ok(
   (select server_updated_at > current_setting('test.stamp0')::timestamptz
