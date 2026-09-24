@@ -354,4 +354,35 @@ describeIt('sync against local Supabase', () => {
     expect((await lost.auth.getSession()).data.session).toBeNull();
     expect(getHouse(readerDb, other.id)?.published).toBe(false);
   });
+
+  it('pullHouse restarts once when a page arrives before its parent (local FK error)', async () => {
+    const ownerDb = createTestDb();
+    const owner = newClient();
+    const { house } = seedHouse(ownerDb);
+    const { joinCode } = await publishAndPush(ownerDb, owner, house.id, 'hunter22');
+    const readerDb = createTestDb();
+    const reader = newClient();
+    const pullSpy = jest.spyOn(pull, 'pullHouse').mockResolvedValueOnce('ok'); // join without its pull
+    await joinByCode(readerDb, reader, joinCode, 'hunter22');
+    pullSpy.mockRestore();
+
+    // The first sessions read misses the session (as if its row were not yet committed), so
+    // session_players then references a session this phone doesn't have.
+    const realFetchPage = remote.fetchPage.bind(remote);
+    let hidden = false;
+    const fetchSpy = jest.spyOn(remote, 'fetchPage').mockImplementation(async (client, table, houseId, after, limit) => {
+      if (table === 'sessions' && !hidden) {
+        hidden = true;
+        return [];
+      }
+      return realFetchPage(client, table, houseId, after, limit);
+    });
+    try {
+      expect(await pullHouse(readerDb, reader, house.id)).toBe('ok');
+    } finally {
+      fetchSpy.mockRestore();
+    }
+    expect(hidden).toBe(true);
+    expect(snapshot(readerDb, house.id)).toEqual(snapshot(ownerDb, house.id));
+  });
 });

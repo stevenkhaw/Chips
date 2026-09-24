@@ -19,6 +19,23 @@ export async function pullHouse(db: Db, client: SupabaseClient, houseId: string)
   // anything still dirty is left completely alone (no network call, no local change) rather than pulled.
   if (local.role === 'owner' && pendingCount(db, houseId) > 0) return 'ok';
 
+  try {
+    return await pullOnce(db, client, houseId);
+  } catch (e) {
+    // A child row can arrive before its parent: the owner stamps a row when written, not when
+    // committed, so a parent read earlier in this pass may have been missed. Restart once from the
+    // saved cursors; each table starts OVERLAP_MS back, so the parent is re-read before its children.
+    if (!isForeignKeyError(e)) throw e;
+    return pullOnce(db, client, houseId);
+  }
+}
+
+function isForeignKeyError(e: unknown): boolean {
+  const message = (e as { message?: unknown } | null)?.message;
+  return typeof message === 'string' && message.includes('FOREIGN KEY');
+}
+
+async function pullOnce(db: Db, client: SupabaseClient, houseId: string): Promise<PullResult> {
   const server = await fetchHouse(client, houseId);
   if (!server) return 'removed';
   applyServerHouse(db, server);
