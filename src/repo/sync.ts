@@ -85,12 +85,13 @@ function toSyncHouse(r: Record<string, unknown>): SyncHouse {
   };
 }
 
+/** The predicate for a house that still needs syncing: shared or joined, not closed, and either live or not yet pushed. */
+const SYNC_HOUSE_WHERE = 'published = 1 AND closed = 0 AND (deleted_at IS NULL OR dirty = 1)';
+
 /** Published houses that sync: live ones, plus deleted ones whose deletion has not been pushed yet. */
 export function listSyncHouses(db: Db): SyncHouse[] {
   return db
-    .all<Record<string, unknown>>(
-      `SELECT ${SYNC_HOUSE_COLS} FROM houses WHERE published = 1 AND (deleted_at IS NULL OR dirty = 1) ORDER BY created_at ASC`,
-    )
+    .all<Record<string, unknown>>(`SELECT ${SYNC_HOUSE_COLS} FROM houses WHERE ${SYNC_HOUSE_WHERE} ORDER BY created_at ASC`)
     .map(toSyncHouse);
 }
 
@@ -102,7 +103,7 @@ export function getSyncHouse(db: Db, id: string): SyncHouse | null {
 
 /** True once any house on this phone is shared or joined (the anonymous account already exists). */
 export function hasPublishedHouses(db: Db): boolean {
-  return db.first('SELECT 1 FROM houses WHERE published = 1 LIMIT 1') != null;
+  return db.first(`SELECT 1 FROM houses WHERE ${SYNC_HOUSE_WHERE} LIMIT 1`) != null;
 }
 
 export function markPublished(db: Db, id: string, joinCode: string): void {

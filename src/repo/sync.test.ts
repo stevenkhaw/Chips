@@ -84,6 +84,19 @@ describe('sync repo', () => {
     expect(hasPublishedHouses(db2)).toBe(true);
   });
 
+  it('hasPublishedHouses ignores a deleted-and-pushed owner house and a closed reader house', () => {
+    const db = createTestDb();
+    const owned = createHouse(db, { name: 'Gone', currencySymbol: '$' });
+    markPublished(db, owned.id, 'AAAAAAAA');
+    db.run('UPDATE houses SET deleted_at = 5, updated_at = 5, dirty = 0 WHERE id = ?', [owned.id]); // clean: already pushed
+    expect(hasPublishedHouses(db)).toBe(false);
+
+    const db2 = createTestDb();
+    insertJoinedHouse(db2, server(), 'reader');
+    applyServerHouse(db2, server({ deleted_at: 999 })); // reader sees the owner's delete: house closes
+    expect(hasPublishedHouses(db2)).toBe(false);
+  });
+
   it('lists deleted published houses only while they still need a push', () => {
     const db = createTestDb();
     const other = createHouse(db, { name: 'Other', currencySymbol: '$' });
