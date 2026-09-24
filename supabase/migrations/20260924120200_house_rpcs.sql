@@ -58,7 +58,7 @@ begin
         exit;
       exception when unique_violation then
         get stacked diagnostics v_constraint = constraint_name;
-        if v_constraint <> 'houses_join_code_key' then raise; end if;
+        if v_constraint is distinct from 'houses_join_code_key' then raise; end if;
         -- join code collision: draw again
       end;
     end loop;
@@ -89,6 +89,8 @@ declare
   v_hash text;
 begin
   if v_uid is null then raise exception 'not_authenticated'; end if;
+  -- Serialise one user's attempts so parallel calls cannot slip past the lockout.
+  perform pg_advisory_xact_lock(hashtextextended(v_uid::text, 0));
 
   delete from private.join_attempts a where a.user_id = v_uid and a.at < now() - interval '1 day';
 
@@ -149,7 +151,7 @@ revoke execute on function
   public.create_house(uuid, text, text, text),
   public.join_house(text, text),
   public.join_house_by_link(uuid, text)
-from public, anon;
+from public, anon, service_role;
 grant execute on function
   public.create_house(uuid, text, text, text),
   public.join_house(text, text),

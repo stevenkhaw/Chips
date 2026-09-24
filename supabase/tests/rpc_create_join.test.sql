@@ -16,6 +16,13 @@ select throws_ok(
   '42501', null, 'anon cannot create houses');
 select throws_ok($$select public.join_house('AAAAAAAA', 'x')$$, '42501', null, 'anon cannot join');
 
+-- service_role cannot call these either (default privileges must be revoked)
+set local role service_role;
+select throws_ok(
+  $$select * from public.create_house('cccccccc-cccc-cccc-cccc-cccccccccccc', 'X', '£', 'hunter22')$$,
+  '42501', null, 'service_role cannot create houses');
+select throws_ok($$select public.join_house('AAAAAAAA', 'x')$$, '42501', null, 'service_role cannot join');
+
 -- create
 set local role authenticated;
 set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
@@ -106,7 +113,9 @@ select is(public.join_house_by_link('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'not
   '{"ok": false, "error": "invalid"}'::jsonb, 'a wrong link secret is invalid');
 select is((public.join_house_by_link('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', current_setting('test.secret'))) ->> 'ok',
   'true', 'the right link secret joins');
-select results_eq($$select role from public.house_members$$, array['reader'], 'link joiner is a reader');
+select results_eq(
+  $$select role from public.house_members where user_id = '00000000-0000-0000-0000-000000000005'$$,
+  array['reader'], 'link joiner is a reader');
 
 select * from finish();
 rollback;
