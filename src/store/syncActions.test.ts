@@ -5,6 +5,7 @@ jest.mock('@/sync/remote', () => ({
   ensureSession: jest.fn(),
   rpcCreateHouse: jest.fn(),
   rpcLeaveHouse: jest.fn(),
+  currentUserId: jest.fn(),
 }));
 
 import { Alert } from 'react-native';
@@ -17,7 +18,7 @@ import { setSyncClient } from '@/sync/registry';
 import { pushHouse } from '@/sync/push';
 import { pullHouse } from '@/sync/pull';
 import { reloadAll } from './houseActions';
-import { ensureSession, rpcCreateHouse, rpcLeaveHouse } from '@/sync/remote';
+import { currentUserId, ensureSession, rpcCreateHouse, rpcLeaveHouse } from '@/sync/remote';
 import { loadPassword } from '@/sync/passwords';
 import { PUSH_DEBOUNCE_MS, leaveHouse, loadMembers, pushDirtyHouses, schedulePush, shareHouse, syncHouse, startSync } from './syncActions';
 import { useSessionsStore } from './useSessionsStore';
@@ -29,6 +30,7 @@ const pull = pullHouse as jest.Mock;
 const session = ensureSession as jest.Mock;
 const createRpc = rpcCreateHouse as jest.Mock;
 const leaveRpc = rpcLeaveHouse as jest.Mock;
+const getUserId = currentUserId as jest.Mock;
 
 describe('syncActions', () => {
   let houseId: string;
@@ -46,6 +48,8 @@ describe('syncActions', () => {
     session.mockReset();
     createRpc.mockReset();
     leaveRpc.mockReset();
+    getUserId.mockReset();
+    getUserId.mockResolvedValue('user-1');
     useSyncStore.setState({ byHouse: {}, pending: {} });
   });
 
@@ -79,6 +83,7 @@ describe('syncActions', () => {
     push.mockImplementation(() => new Promise<number>((r) => (release = () => r(1))));
     const a = syncHouse(houseId);
     const b = syncHouse(houseId);
+    await jest.advanceTimersByTimeAsync(0); // let currentUserId resolve before push starts
     release();
     await Promise.all([a, b]);
     expect(push).toHaveBeenCalledTimes(1);
@@ -160,6 +165,7 @@ describe('syncActions', () => {
     push.mockResolvedValue(1);
     const first = syncHouse(houseId);
     const second = pushDirtyHouses();
+    await jest.advanceTimersByTimeAsync(0); // let currentUserId resolve before push starts
     release();
     await Promise.all([first, second]);
     expect(push).toHaveBeenCalledTimes(2);
@@ -217,6 +223,11 @@ describe('syncActions', () => {
   it('loadMembers never signs in: no session means signed out', async () => {
     const signIn = jest.fn();
     setSyncClient({ auth: { getSession: async () => ({ data: { session: null } }), signInAnonymously: signIn } } as never);
+    getUserId.mockImplementationOnce(async (client) => {
+      const { data } = await client.auth.getSession();
+      if (!data.session) throw Object.assign(new Error('signed_out'), { code: 'signed_out' });
+      return data.session.user.id;
+    });
     await expect(loadMembers(houseId)).rejects.toMatchObject({ code: 'signed_out' });
     expect(signIn).not.toHaveBeenCalled();
     expect(session).not.toHaveBeenCalled();
@@ -257,5 +268,32 @@ describe('syncActions', () => {
     await syncHouse(server.id);
     expect(alert).toHaveBeenCalledWith('Removed from house', expect.any(String));
     alert.mockRestore();
+  });
+
+  it('a lost session on a reader house errors without purging or pulling', async () => {
+    const db = getDb();
+    const server: ServerHouse = {
+      id: 'reader-house-4', name: 'Signed Out', currency_symbol: '$', join_code: 'SIGNEDOU', created_at: 1, updated_at: 1, deleted_at: null,
+    };
+    insertJoinedHouse(db, server, 'reader');
+    const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+    getUserId.mockRejectedValue(Object.assign(new Error('signed_out'), { code: 'signed_out' }));
+
+    await syncHouse(server.id);
+
+    expect(pull).not.toHaveBeenCalled();
+    expect(alert).not.toHaveBeenCalled();
+    expect(getHouse(db, server.id)).not.toBeNull(); // not purged
+    expect(useSyncStore.getState().byHouse[server.id]).toEqual({ phase: 'error', message: 'Signed out of sharing' });
+    alert.mockRestore();
+  });
+
+  it('a lost session on an owner house errors without pushing', async () => {
+    getUserId.mockResolvedValue(null);
+
+    await syncHouse(houseId);
+
+    expect(push).not.toHaveBeenCalled();
+    expect(useSyncStore.getState().byHouse[houseId]).toEqual({ phase: 'error', message: 'Signed out of sharing' });
   });
 });
