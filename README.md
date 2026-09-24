@@ -96,3 +96,13 @@ bar, Manrope loading) have not been run. They are covered by the same Device che
 Android device with Expo Go is available.
 
 v1 on-device only. Sync, leaderboard and charts deferred (see spec §11).
+
+## Server (Supabase)
+
+Shared houses sync through Supabase. Schema, row-level security and server
+functions live in `supabase/migrations/`; pgTAP tests in `supabase/tests/`.
+
+    supabase start        # local stack (needs Docker)
+    supabase db reset     # re-apply every migration to the local database
+    supabase test db      # run the pgTAP tests
+    supabase db push      # apply new migrations to the hosted project (after `supabase link`)
