@@ -31,6 +31,7 @@ export default function NewHouseScreen() {
         style={s.input}
         autoFocus
         returnKeyType="done"
+        maxLength={60}
       />
       <Overline style={{ marginTop: space.lg, marginBottom: space.sm }}>Currency symbol</Overline>
       <TextInput value={currency} onChangeText={setCurrency} style={[s.input, { width: 96 }]} maxLength={3} autoCapitalize="none" />
