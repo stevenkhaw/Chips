@@ -1,4 +1,4 @@
-import { buildHistory } from './history';
+import { buildHistory, playerStats } from './history';
 import type { Buyin, Player, SessionDetail, SessionPlayer } from './types';
 
 const base = { createdAt: 0, updatedAt: 0, deletedAt: null };
@@ -77,5 +77,64 @@ describe('buildHistory', () => {
       { p: ann, buyin: 2000, cashout: 2000 },
     ]);
     expect(buildHistory([n1]).players.map((p) => p.name)).toEqual(['Ann', 'Cat']);
+  });
+});
+
+describe('playerStats', () => {
+  const n1 = night('s1', '2026-09-01', [
+    { p: ann, buyin: 2000, cashout: 5000 },
+    { p: bob, buyin: 2000, cashout: 0 },
+  ]);
+  const n2 = night('s2', '2026-09-08', [{ p: bob, buyin: 4000, cashout: 6000 }]);
+  const n3 = night('s3', '2026-09-15', [
+    { p: ann, buyin: 2000, cashout: null },
+    { p: bob, buyin: 2000, cashout: 2000 },
+  ]);
+  const n4 = night('s4', '2026-09-22', [
+    { p: ann, buyin: 2000, cashout: 1500 },
+    { p: bob, buyin: 2000, cashout: 1000 },
+  ]);
+  const h = buildHistory([n1, n2, n3, n4]);
+
+  it('returns null for a player with no nights', () => {
+    expect(playerStats(h, 'nobody')).toBeNull();
+  });
+
+  it('lists only the nights the player attended, chronologically, with net and running total', () => {
+    const st = playerStats(h, 'p1')!;
+    expect(st.player.name).toBe('Ann');
+    expect(st.nights.map((n) => [n.session.id, n.netCents, n.cumulativeCents])).toEqual([
+      ['s1', 3000, 3000],
+      ['s3', null, null],
+      ['s4', -500, 2500],
+    ]);
+  });
+
+  it('computes best, worst, record and average from settled nights only', () => {
+    const st = playerStats(h, 'p1')!;
+    expect(st.bestNight?.session.id).toBe('s1');
+    expect(st.worstNight?.session.id).toBe('s4');
+    expect(st.wins).toBe(1);
+    expect(st.losses).toBe(1);
+    expect(st.evens).toBe(0);
+    expect(st.avgNetCents).toBe(1250);
+
+    const bob = playerStats(h, 'p2')!;
+    expect(bob.nights).toHaveLength(4);
+    expect(bob.wins).toBe(1);
+    expect(bob.losses).toBe(2);
+    expect(bob.evens).toBe(1);
+    expect(bob.bestNight?.netCents).toBe(2000);
+    expect(bob.worstNight?.netCents).toBe(-2000);
+    expect(bob.avgNetCents).toBe(-250);
+  });
+
+  it('has no best or worst when every night is pending', () => {
+    const only = buildHistory([night('s9', '2026-10-01', [{ p: cat, buyin: 2000, cashout: null }])]);
+    const st = playerStats(only, 'p3')!;
+    expect(st.nights).toHaveLength(1);
+    expect(st.bestNight).toBeNull();
+    expect(st.worstNight).toBeNull();
+    expect(st.avgNetCents).toBe(0);
   });
 });

@@ -5,17 +5,18 @@ import * as Sharing from 'expo-sharing';
 import { captureRef } from 'react-native-view-shot';
 import { formatCents, formatSigned } from '@/domain/money';
 import type { SessionSummaryMath } from '@/domain/nets';
+import type { PlayerStats } from '@/domain/history';
 import type { SessionDetail } from '@/domain/types';
 import { formatDate } from '@/date';
 
-export async function captureAndShare(ref: RefObject<View | null>): Promise<void> {
+export async function captureAndShare(ref: RefObject<View | null>, dialogTitle = 'Share settlement'): Promise<void> {
   if (!ref.current) throw new Error('Nothing to share yet');
   if (!(await Sharing.isAvailableAsync())) throw new Error('Sharing is not available on this device');
   // useRenderInContext (iOS-only) avoids the default drawViewHierarchyInRect path, which
   // react-native-view-shot's own source warns can return a blank image for large or
   // offscreen views. It is a no-op on Android.
   const uri = await captureRef(ref, { format: 'png', result: 'tmpfile', useRenderInContext: true });
-  await Sharing.shareAsync(uri, { mimeType: 'image/png', dialogTitle: 'Share settlement' });
+  await Sharing.shareAsync(uri, { mimeType: 'image/png', dialogTitle });
 }
 
 /** Plain-text twin of the share card, for pasting into any chat app. */
@@ -62,6 +63,31 @@ export function buildShareText(detail: SessionDetail, math: SessionSummaryMath, 
   );
   if (pending > 0 && disc !== 0) {
     lines.push(`${pending} player${pending === 1 ? '' : 's'} not cashed out`);
+  }
+  return lines.join('\n');
+}
+
+/** Plain-text twin of the player stats card. */
+export function buildPlayerShareText(stats: PlayerStats, symbol: string): string {
+  const { player } = stats;
+  const lines: string[] = [
+    `${player.name} — all-time ${formatSigned(player.totalNetCents, symbol)}`,
+    `${player.nightsPlayed} night${player.nightsPlayed === 1 ? '' : 's'} · ${stats.wins}W ${stats.losses}L${
+      stats.evens > 0 ? ` ${stats.evens}E` : ''
+    } · avg ${formatSigned(stats.avgNetCents, symbol)}`,
+  ];
+  if (stats.bestNight && stats.bestNight.netCents !== null) {
+    lines.push(`Best: ${formatSigned(stats.bestNight.netCents, symbol)} (${formatDate(stats.bestNight.session.date)})`);
+  }
+  if (stats.worstNight && stats.worstNight.netCents !== null) {
+    lines.push(`Worst: ${formatSigned(stats.worstNight.netCents, symbol)} (${formatDate(stats.worstNight.session.date)})`);
+  }
+  lines.push('', 'Nights:');
+  for (const n of [...stats.nights].reverse()) {
+    const label = n.session.title?.trim() ? n.session.title : formatDate(n.session.date);
+    const net = n.netCents === null ? 'pending' : formatSigned(n.netCents, symbol);
+    const run = n.cumulativeCents === null ? '' : `  (${formatSigned(n.cumulativeCents, symbol)})`;
+    lines.push(`• ${label}  ${net}${run}`);
   }
   return lines.join('\n');
 }

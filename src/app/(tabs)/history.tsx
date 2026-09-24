@@ -67,7 +67,11 @@ export default function HistoryScreen() {
           return (
             <View key={p.playerId}>
               {i > 0 ? <Divider /> : null}
-              <Row style={s.standingRow}>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={`${p.name} stats`}
+                onPress={() => router.push(`/player/${p.playerId}`)}
+                style={({ pressed }) => [s.standingRow, pressed && { backgroundColor: colors.cardAlt }]}>
                 <Text style={s.rank}>{i + 1}</Text>
                 <Avatar name={p.name} playerId={p.playerId} size={32} />
                 <View style={{ flex: 1, marginLeft: space.sm }}>
@@ -79,7 +83,8 @@ export default function HistoryScreen() {
                   </Caption>
                 </View>
                 <MoneyText cents={p.totalNetCents} signed />
-              </Row>
+                <Text style={s.chevron}>›</Text>
+              </Pressable>
             </View>
           );
         })}
@@ -138,7 +143,7 @@ export default function HistoryScreen() {
         </ScrollView>
       </View>
       <Body dim style={{ marginTop: space.sm }}>
-        Tap a night to open it. “—” means absent or not cashed out.
+        Tap a player for their stats, or a night to open it. “—” means absent or not cashed out.
       </Body>
     </Screen>
   );
@@ -154,7 +159,8 @@ const s = StyleSheet.create({
     borderColor: colors.border,
     overflow: 'hidden',
   },
-  standingRow: { paddingHorizontal: space.md, paddingVertical: space.md },
+  standingRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: space.md, paddingVertical: space.md },
+  chevron: { ...textStyles.headlineMd, color: colors.textMuted, marginLeft: space.sm },
   rank: { ...textStyles.labelMd, color: colors.textMuted, width: 20 },
   name: { ...textStyles.labelMd, fontSize: 15, color: colors.text },
   tableHead: { paddingHorizontal: space.md, paddingVertical: space.sm, alignItems: 'flex-end' },
