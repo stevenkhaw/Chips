@@ -11,14 +11,16 @@ import { createTestDb } from '../../test/nodeDb';
 import { createHouse, deleteHouse, getCurrentHouseId, getHouse } from '@/repo/houses';
 import { createPlayer, renamePlayer } from '@/repo/players';
 import { addBuyin, addPayment, createSession, deleteSession, removeBuyin, setCashout } from '@/repo/sessions';
-import { SYNC_COLUMNS, pendingCount, type SyncTable } from '@/repo/sync';
+import { getSyncHouse, SYNC_COLUMNS, pendingCount, type SyncTable } from '@/repo/sync';
 import { LEDGER_TABLES } from '@/db/schema';
 import { publishHouse } from './publish';
 import { pushHouse } from './push';
 import * as remote from './remote';
-import { rpcLeaveHouse, rpcRemoveMember, upsertRows, PAGE_SIZE } from './remote';
+import { fetchHouse, fetchPage, rpcLeaveHouse, rpcRemoveMember, upsertRows, PAGE_SIZE } from './remote';
+import { overlapStart } from './cursor';
 import { joinByCode } from './join';
 import { pullHouse } from './pull';
+import * as pull from './pull';
 
 const URL = process.env.CHIPS_SUPABASE_URL;
 const KEY = process.env.CHIPS_SUPABASE_KEY;
@@ -190,6 +192,7 @@ describeIt('sync against local Supabase', () => {
     const badCode = await joinByCode(db, reader, 'ZZZZZZZZ', 'hunter22');
     expect(badPw).toEqual({ ok: false, error: 'invalid' });
     expect(badCode).toEqual(badPw);
+    expect(getHouse(db, house.id)).toBeNull();
   });
 
   it('pulls later edits, soft deletes and renames incrementally', async () => {
@@ -229,7 +232,16 @@ describeIt('sync against local Supabase', () => {
     const { house, ann } = seedHouse(ownerDb);
     const { joinCode } = await publishHouse(ownerDb, newClient(), house.id, 'hunter22');
     const reader = newClient();
-    await joinByCode(createTestDb(), reader, joinCode, 'hunter22');
+    expect(await joinByCode(createTestDb(), reader, joinCode, 'hunter22')).toEqual(
+      expect.objectContaining({ ok: true, role: 'reader' }),
+    );
+
+    // The reader can read the row it is about to try (and fail) to write...
+    expect(await fetchHouse(reader, house.id)).not.toBeNull();
+    const page = await fetchPage(reader, 'players', house.id, overlapStart(undefined));
+    expect(page.map((p) => p.id)).toContain(ann.id);
+
+    // ...but any write is rejected by row-level security.
     await expect(
       upsertRows(reader, 'players', [
         { ...(snapshot(ownerDb, house.id).players.find((p) => (p as { id: string }).id === ann.id) as Record<string, unknown>), name: 'Hacked' } as never,
@@ -245,14 +257,16 @@ describeIt('sync against local Supabase', () => {
 
     const r1Db = createTestDb();
     const r1 = newClient();
-    await joinByCode(r1Db, r1, joinCode, 'hunter22');
+    expect(await joinByCode(r1Db, r1, joinCode, 'hunter22')).toEqual({ ok: true, houseId: house.id, role: 'reader' });
+    expect(await pullHouse(r1Db, r1, house.id)).toBe('ok');
     const r1Id = await ensureSession(r1);
     await rpcRemoveMember(owner, house.id, r1Id);
     expect(await pullHouse(r1Db, r1, house.id)).toBe('removed');
 
     const r2Db = createTestDb();
     const r2 = newClient();
-    await joinByCode(r2Db, r2, joinCode, 'hunter22');
+    expect(await joinByCode(r2Db, r2, joinCode, 'hunter22')).toEqual({ ok: true, houseId: house.id, role: 'reader' });
+    expect(await pullHouse(r2Db, r2, house.id)).toBe('ok');
     await rpcLeaveHouse(r2, house.id);
     expect(await pullHouse(r2Db, r2, house.id)).toBe('removed');
 
@@ -268,9 +282,47 @@ describeIt('sync against local Supabase', () => {
   it('the owner joining their own code keeps owner role and pulls nothing', async () => {
     const db = createTestDb();
     const owner = newClient();
-    const { house } = seedHouse(db);
+    const { house, ann } = seedHouse(db);
     const { joinCode } = await publishHouse(db, owner, house.id, 'hunter22');
+
+    // A local, unpushed edit that a wrongful pull-over-self would clobber.
+    db.run("UPDATE houses SET name = 'Local only', updated_at = updated_at + 1, dirty = 1 WHERE id = ?", [house.id]);
+    renamePlayer(db, ann.id, 'Annie Local');
+    expect(pendingCount(db, house.id)).toBeGreaterThan(0);
+
     expect(await joinByCode(db, owner, joinCode, 'hunter22')).toEqual({ ok: true, houseId: house.id, role: 'owner' });
-    expect(pendingCount(db, house.id)).toBe(0);
+    // insertJoinedHouse returned false (house already on this phone), so no pull ran: the local edits survive.
+    expect(pendingCount(db, house.id)).toBeGreaterThan(0);
+    expect(getHouse(db, house.id)?.name).toBe('Local only');
+    expect(db.first<{ name: string }>('SELECT name FROM players WHERE id = ?', [ann.id])?.name).toBe('Annie Local');
+
+    // The owner guard (spec ruling): pullHouse on an owner house with pending edits is a safe no-op.
+    expect(await pullHouse(db, owner, house.id)).toBe('ok');
+    expect(pendingCount(db, house.id)).toBeGreaterThan(0);
+    expect(getHouse(db, house.id)?.name).toBe('Local only');
+    expect(db.first<{ name: string }>('SELECT name FROM players WHERE id = ?', [ann.id])?.name).toBe('Annie Local');
+  });
+
+  it('pullHouse throws for a house not on this phone', async () => {
+    const db = createTestDb();
+    await expect(pullHouse(db, newClient(), '00000000-0000-0000-0000-000000000000')).rejects.toThrow('House not on this phone');
+  });
+
+  it('joinByCode still reports success when the post-join pull fails; the next sync retries', async () => {
+    const ownerDb = createTestDb();
+    const owner = newClient();
+    const { house } = seedHouse(ownerDb);
+    const { joinCode } = await publishHouse(ownerDb, owner, house.id, 'hunter22');
+
+    const readerDb = createTestDb();
+    const reader = newClient();
+    const pullSpy = jest.spyOn(pull, 'pullHouse').mockRejectedValueOnce(new Error('network request failed'));
+    expect(await joinByCode(readerDb, reader, joinCode, 'hunter22')).toEqual({ ok: true, houseId: house.id, role: 'reader' });
+    pullSpy.mockRestore();
+
+    // The house is already on this phone (insertJoinedHouse ran), just not pulled yet.
+    expect(getHouse(readerDb, house.id)).toEqual(expect.objectContaining({ id: house.id, role: 'reader', published: true }));
+    expect(await pullHouse(readerDb, reader, house.id)).toBe('ok');
+    expect(snapshot(readerDb, house.id)).toEqual(snapshot(ownerDb, house.id));
   });
 });

@@ -24,6 +24,13 @@ export async function joinByCode(
   await ensureSession(client);
   const r = await rpcJoinHouse(client, code, password, displayName);
   if (!r.ok) return r;
-  if (insertJoinedHouse(db, r.house, r.role)) await pullHouse(db, client, r.house.id);
+  if (insertJoinedHouse(db, r.house, r.role)) {
+    try {
+      await pullHouse(db, client, r.house.id);
+    } catch {
+      // The house is already inserted (so already in listSyncHouses); swallow so the join still
+      // reports success, and let the next sync pass retry the pull.
+    }
+  }
   return { ok: true, houseId: r.house.id, role: r.role };
 }

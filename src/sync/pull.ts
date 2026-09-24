@@ -1,7 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Db } from '@/db/types';
 import { LEDGER_TABLES } from '@/db/schema';
-import { applyPulledRows, applyServerHouse, getSyncHouse, setLastSynced, setPullCursor } from '@/repo/sync';
+import { applyPulledRows, applyServerHouse, getSyncHouse, pendingCount, setLastSynced, setPullCursor } from '@/repo/sync';
 import { overlapStart, parseCursors, serializeCursors } from './cursor';
 import { PAGE_SIZE, fetchHouse, fetchPage } from './remote';
 
@@ -13,6 +13,12 @@ export type PullResult = 'ok' | 'removed' | 'closed';
  * Soft-deleted rows arrive like any other; local `deleted_at IS NULL` filters hide them.
  */
 export async function pullHouse(db: Db, client: SupabaseClient, houseId: string): Promise<PullResult> {
+  const local = getSyncHouse(db, houseId);
+  if (!local) throw new Error('House not on this phone');
+  // Owners are the source of truth: this never overwrites unpushed edits, so an owner house with
+  // anything still dirty is left completely alone (no network call, no local change) rather than pulled.
+  if (local.role === 'owner' && pendingCount(db, houseId) > 0) return 'ok';
+
   const server = await fetchHouse(client, houseId);
   if (!server) return 'removed';
   applyServerHouse(db, server);
