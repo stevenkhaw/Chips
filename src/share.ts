@@ -1,11 +1,12 @@
 import type { RefObject } from 'react';
 import type { View } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
+import { File, Paths } from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 import { captureRef } from 'react-native-view-shot';
 import { formatCents, formatSigned } from '@/domain/money';
 import type { SessionSummaryMath } from '@/domain/nets';
-import type { PlayerStats } from '@/domain/history';
+import type { History, PlayerStats } from '@/domain/history';
 import type { SessionDetail } from '@/domain/types';
 import { formatDate } from '@/date';
 
@@ -90,6 +91,79 @@ export function buildPlayerShareText(stats: PlayerStats, symbol: string): string
     lines.push(`• ${label}  ${net}${run}`);
   }
   return lines.join('\n');
+}
+
+/** Plain-text twin of the history card: standings, then nights newest first. */
+export function buildHistoryShareText(history: History, symbol: string): string {
+  const { nights, players } = history;
+  const lines: string[] = ['Standings:'];
+  players.forEach((p, i) => {
+    const avg = p.nightsPlayed > 0 ? Math.round(p.totalNetCents / p.nightsPlayed) : 0;
+    lines.push(
+      `${i + 1}. ${p.name}  ${formatSigned(p.totalNetCents, symbol)}  (${p.nightsPlayed} night${p.nightsPlayed === 1 ? '' : 's'} · avg ${formatSigned(avg, symbol)})`,
+    );
+  });
+
+  lines.push('', 'Nights:');
+  for (const nt of [...nights].reverse()) {
+    const label = nt.session.title?.trim() ? nt.session.title : formatDate(nt.session.date);
+    const parts = players
+      .filter((p) => p.playerId in nt.nets)
+      .map((p) => {
+        const net = nt.nets[p.playerId];
+        return `${p.name} ${net === null ? 'pending' : formatSigned(net, symbol)}`;
+      });
+    lines.push(`• ${label}: ${parts.join(', ')}`);
+  }
+
+  return lines.join('\n');
+}
+
+/** RFC 4180 field quoting: wraps and doubles quotes when the value contains a comma, quote, or newline. */
+function csvField(value: string): string {
+  if (/[",\n]/.test(value)) return `"${value.replace(/"/g, '""')}"`;
+  return value;
+}
+
+/** Plain decimal dollars, no currency symbol, for spreadsheet parsing (e.g. `-7.00`). */
+function csvCents(cents: number): string {
+  const sign = cents < 0 ? '-' : '';
+  const abs = Math.abs(cents);
+  const dollars = Math.floor(abs / 100);
+  const rem = abs % 100;
+  return `${sign}${dollars}.${rem.toString().padStart(2, '0')}`;
+}
+
+/** Full Nights table as CSV: header, one row per night oldest first, then a Total row. */
+export function buildHistoryCsv(history: History): string {
+  const { nights, players } = history;
+  const header = ['Night', 'Date', ...players.map((p) => p.name)].map(csvField).join(',');
+
+  const rows = nights.map((nt) => {
+    const label = nt.session.title?.trim() ? nt.session.title : formatDate(nt.session.date);
+    const cells = players.map((p) => {
+      const net = nt.nets[p.playerId];
+      return net === null || net === undefined ? '' : csvCents(net);
+    });
+    return [csvField(label), nt.session.date, ...cells].join(',');
+  });
+
+  const totalRow = ['Total', '', ...players.map((p) => csvCents(p.totalNetCents))].join(',');
+
+  return [header, ...rows, totalRow].join('\n');
+}
+
+/** Writes CSV text to the cache directory and shares it. */
+export async function shareCsv(csv: string, filename: string): Promise<void> {
+  if (!(await Sharing.isAvailableAsync())) throw new Error('Sharing is not available on this device');
+  const file = new File(Paths.cache, filename);
+  file.create({ overwrite: true });
+  file.write(csv);
+  await Sharing.shareAsync(file.uri, {
+    mimeType: 'text/csv',
+    UTI: 'public.comma-separated-values-text',
+    dialogTitle: 'Export history',
+  });
 }
 
 export async function copyToClipboard(text: string): Promise<void> {
