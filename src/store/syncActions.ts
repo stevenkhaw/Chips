@@ -26,6 +26,8 @@ export function refreshPending(): void {
 }
 
 const inflight = new Map<string, Promise<void>>();
+/** Houses this phone is leaving right now: a pull that finds them gone is expected, not an alert. */
+const leaving = new Set<string>();
 
 /** Push (owner) or pull (reader) one published house. Concurrent calls for the same house share one run. */
 export function syncHouse(houseId: string): Promise<void> {
@@ -74,7 +76,7 @@ async function runSync(houseId: string): Promise<void> {
       if (result === 'removed') {
         syncRepo.purgeHouse(db, houseId);
         reloadAll();
-        Alert.alert('Removed from house', `You no longer have access to "${h.name}".`);
+        if (!leaving.has(houseId)) Alert.alert('Removed from house', `You no longer have access to "${h.name}".`);
       } else if (houseId === useHousesStore.getState().currentHouseId) {
         refreshCurrentHouseViews();
       }
@@ -193,11 +195,23 @@ export async function joinHouse(code: string, password: string, displayName: str
   return r;
 }
 
+/**
+ * Waits for any in-flight sync before leaving on the server, so a pull already under way can't
+ * come back "removed" because of this leave. A sync that starts meanwhile (foreground, refresh)
+ * sees the house in `leaving` and purges without the "Removed from house" alert.
+ */
 export async function leaveHouse(houseId: string): Promise<void> {
-  await rpcLeaveHouse(requireSyncClient(), houseId);
-  await inflight.get(houseId)?.catch(() => {});
-  syncRepo.purgeHouse(getDb(), houseId);
-  reloadAll();
+  const client = requireSyncClient();
+  leaving.add(houseId);
+  try {
+    await inflight.get(houseId)?.catch(() => {});
+    await rpcLeaveHouse(client, houseId);
+    await inflight.get(houseId)?.catch(() => {});
+    syncRepo.purgeHouse(getDb(), houseId);
+    reloadAll();
+  } finally {
+    leaving.delete(houseId);
+  }
 }
 
 export async function removeClosedHouse(houseId: string): Promise<void> {

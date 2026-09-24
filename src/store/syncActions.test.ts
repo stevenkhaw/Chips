@@ -7,6 +7,7 @@ jest.mock('@/sync/remote', () => ({
   rpcLeaveHouse: jest.fn(),
 }));
 
+import { Alert } from 'react-native';
 import { createTestDb } from '../../test/nodeDb';
 import { setDb } from '@/db/connection';
 import { createHouse, getCurrentHouseId, getHouse, setCurrentHouse } from '@/repo/houses';
@@ -219,5 +220,42 @@ describe('syncActions', () => {
     await expect(loadMembers(houseId)).rejects.toMatchObject({ code: 'signed_out' });
     expect(signIn).not.toHaveBeenCalled();
     expect(session).not.toHaveBeenCalled();
+  });
+
+  it('leaveHouse waits for an in-flight pull before leaving, and never shows "Removed from house"', async () => {
+    const db = getDb();
+    const server: ServerHouse = {
+      id: 'reader-house-2', name: 'Leaving', currency_symbol: '$', join_code: 'LEAVEHHH', created_at: 1, updated_at: 1, deleted_at: null,
+    };
+    insertJoinedHouse(db, server, 'reader');
+    const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+    let finishPull!: (r: string) => void;
+    pull.mockImplementation(() => new Promise<string>((r) => (finishPull = r)));
+    leaveRpc.mockResolvedValue(undefined);
+
+    const syncing = syncHouse(server.id);
+    const leaving = leaveHouse(server.id);
+    await jest.advanceTimersByTimeAsync(0);
+    expect(leaveRpc).not.toHaveBeenCalled(); // still waiting on the pull
+
+    finishPull('removed'); // the pull raced the leave on the server
+    await Promise.all([syncing, leaving]);
+    expect(leaveRpc).toHaveBeenCalledTimes(1);
+    expect(alert).not.toHaveBeenCalled();
+    expect(getHouse(db, server.id)).toBeNull();
+    alert.mockRestore();
+  });
+
+  it('a pull that finds the reader removed still alerts when not leaving', async () => {
+    const db = getDb();
+    const server: ServerHouse = {
+      id: 'reader-house-3', name: 'Kicked', currency_symbol: '$', join_code: 'KICKEDHH', created_at: 1, updated_at: 1, deleted_at: null,
+    };
+    insertJoinedHouse(db, server, 'reader');
+    const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+    pull.mockResolvedValue('removed');
+    await syncHouse(server.id);
+    expect(alert).toHaveBeenCalledWith('Removed from house', expect.any(String));
+    alert.mockRestore();
   });
 });
