@@ -9,7 +9,7 @@ import { pullHouse } from '@/sync/pull';
 import { publishHouse } from '@/sync/publish';
 import { pushHouse } from '@/sync/push';
 import { getSyncClient, requireSyncClient } from '@/sync/registry';
-import { currentUserId, listMembers, rpcLeaveHouse, rpcRemoveMember, rpcResetPassword, signedOutError, type Member } from '@/sync/remote';
+import { currentUserId, listMembers, rpcLeaveHouse, rpcRemoveMember, rpcResetPassword, type Member } from '@/sync/remote';
 import { reloadAll } from './houseActions';
 import { useHousesStore } from './useHousesStore';
 import { usePlayersStore } from './usePlayersStore';
@@ -68,12 +68,10 @@ async function runSync(houseId: string): Promise<void> {
   const sync = useSyncStore.getState();
   sync.setPhase(houseId, 'syncing');
   try {
-    const userId = await currentUserId(client);
-    if (!userId) {
-      const d = describeSyncError(signedOutError());
-      useSyncStore.getState().setPhase(houseId, d.kind, d.message);
-      return;
-    }
+    // Before any push or pull, confirm there is a session. A lost session throws `signed_out`,
+    // which the catch below turns into "Signed out of sharing"; a thrown offline error (e.g. a
+    // failed token refresh) is classified as offline by describeSyncError instead.
+    await currentUserId(client);
     if (h.role === 'owner') {
       await pushHouse(db, client, houseId);
       syncRepo.setLastSynced(db, houseId);

@@ -26,17 +26,24 @@ export const signedOutError = () => Object.assign(new Error('signed_out'), { cod
  * Stopgap until phase 5's account linking lets a lost session be recovered.
  */
 export async function ensureSession(client: SupabaseClient, opts?: { allowNewUser?: boolean }): Promise<string> {
-  const { data } = await client.auth.getSession();
+  const { data, error } = await client.auth.getSession();
+  // A failed token refresh (e.g. offline) comes back as `{ session: null, error }`, not a throw.
+  // Surface that error instead of treating it as signed out, so we never sign in a new anonymous
+  // user just because the device is offline.
+  if (error) throw error;
   if (data.session) return data.session.user.id;
   if (!opts?.allowNewUser) throw signedOutError();
-  const { data: signed, error } = await client.auth.signInAnonymously();
-  if (error || !signed.user) throw error ?? new Error('Sign-in failed');
+  const { data: signed, error: signInError } = await client.auth.signInAnonymously();
+  if (signInError || !signed.user) throw signInError ?? new Error('Sign-in failed');
   return signed.user.id;
 }
 
 /** The signed-in user id, without ever signing in. Throws `signed_out` when there's no session. */
 export async function currentUserId(client: SupabaseClient): Promise<string> {
-  const { data } = await client.auth.getSession();
+  const { data, error } = await client.auth.getSession();
+  // Same as ensureSession: a failed refresh (offline) returns `{ session: null, error }` rather
+  // than throwing, so describeSyncError would otherwise misclassify it as signed out.
+  if (error) throw error;
   if (!data.session) throw signedOutError();
   return data.session.user.id;
 }

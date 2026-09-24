@@ -223,11 +223,7 @@ describe('syncActions', () => {
   it('loadMembers never signs in: no session means signed out', async () => {
     const signIn = jest.fn();
     setSyncClient({ auth: { getSession: async () => ({ data: { session: null } }), signInAnonymously: signIn } } as never);
-    getUserId.mockImplementationOnce(async (client) => {
-      const { data } = await client.auth.getSession();
-      if (!data.session) throw Object.assign(new Error('signed_out'), { code: 'signed_out' });
-      return data.session.user.id;
-    });
+    getUserId.mockImplementationOnce(jest.requireActual('@/sync/remote').currentUserId);
     await expect(loadMembers(houseId)).rejects.toMatchObject({ code: 'signed_out' });
     expect(signIn).not.toHaveBeenCalled();
     expect(session).not.toHaveBeenCalled();
@@ -289,11 +285,26 @@ describe('syncActions', () => {
   });
 
   it('a lost session on an owner house errors without pushing', async () => {
-    getUserId.mockResolvedValue(null);
+    getUserId.mockRejectedValue(Object.assign(new Error('signed_out'), { code: 'signed_out' }));
 
     await syncHouse(houseId);
 
     expect(push).not.toHaveBeenCalled();
     expect(useSyncStore.getState().byHouse[houseId]).toEqual({ phase: 'error', message: 'Signed out of sharing' });
+  });
+
+  it('currentUserId failing offline (a failed token refresh) marks the house offline, not signed out', async () => {
+    const db = getDb();
+    const server: ServerHouse = {
+      id: 'reader-house-5', name: 'Offline', currency_symbol: '$', join_code: 'OFFLINEE', created_at: 1, updated_at: 1, deleted_at: null,
+    };
+    insertJoinedHouse(db, server, 'reader');
+    getUserId.mockRejectedValue(Object.assign(new TypeError('Network request failed'), { name: 'AuthRetryableFetchError' }));
+
+    await syncHouse(server.id);
+
+    expect(pull).not.toHaveBeenCalled();
+    expect(getHouse(db, server.id)).not.toBeNull(); // not purged
+    expect(useSyncStore.getState().byHouse[server.id]).toEqual({ phase: 'offline', message: "You're offline" });
   });
 });

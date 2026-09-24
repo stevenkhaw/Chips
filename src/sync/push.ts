@@ -22,21 +22,33 @@ export async function pushHouse(db: Db, client: SupabaseClient, houseId: string)
   const rowsByTable = LEDGER_TABLES.map((table) => ({ table, rows: dirtyRows(db, table, houseId) }));
   let pushed = 0;
 
-  if (h.dirty) {
+  const pushHouseRow = async () => {
+    if (!h.dirty) return;
     await updateHouseRow(client, houseId, {
       name: h.name, currency_symbol: h.currencySymbol, updated_at: h.updatedAt, deleted_at: h.deletedAt,
     });
     markClean(db, 'houses', [{ id: houseId, updated_at: h.updatedAt }]);
     pushed += 1;
-  }
-
-  for (const { table, rows } of rowsByTable) {
-    for (let i = 0; i < rows.length; i += PUSH_CHUNK) {
-      const chunk = rows.slice(i, i + PUSH_CHUNK);
-      await upsertRows(client, table, chunk);
-      markClean(db, table, chunk as { id: string; updated_at: number }[]);
-      pushed += chunk.length;
+  };
+  const pushLedgerRows = async () => {
+    for (const { table, rows } of rowsByTable) {
+      for (let i = 0; i < rows.length; i += PUSH_CHUNK) {
+        const chunk = rows.slice(i, i + PUSH_CHUNK);
+        await upsertRows(client, table, chunk);
+        markClean(db, table, chunk as { id: string; updated_at: number }[]);
+        pushed += chunk.length;
+      }
     }
+  };
+
+  // A soft-deleted house pushes its ledger rows first: if the house row landed first, a reader
+  // pull racing between the two pushes could see the house "closed" without the final edits.
+  if (h.deletedAt !== null) {
+    await pushLedgerRows();
+    await pushHouseRow();
+  } else {
+    await pushHouseRow();
+    await pushLedgerRows();
   }
   return pushed;
 }
