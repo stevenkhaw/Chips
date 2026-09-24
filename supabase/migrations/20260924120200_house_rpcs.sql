@@ -157,3 +157,64 @@ grant execute on function
   public.join_house(text, text),
   public.join_house_by_link(uuid, text)
 to authenticated;
+
+create function public.reset_house_password(p_house_id uuid, p_password text)
+returns void
+language plpgsql security definer set search_path = '' as $$
+begin
+  if not private.is_house_owner(p_house_id) then raise exception 'forbidden'; end if;
+  if p_password is null or char_length(p_password) < 4 then raise exception 'weak_password'; end if;
+  update public.house_secrets s
+    set password_hash = extensions.crypt(p_password, extensions.gen_salt('bf', 8))
+    where s.house_id = p_house_id;
+end;
+$$;
+
+-- Old links stop working; existing members stay.
+create function public.reset_house_link(p_house_id uuid)
+returns text
+language plpgsql security definer set search_path = '' as $$
+declare
+  v_secret text := private.new_invite_secret();
+begin
+  if not private.is_house_owner(p_house_id) then raise exception 'forbidden'; end if;
+  update public.house_secrets s set invite_secret = v_secret where s.house_id = p_house_id;
+  return v_secret;
+end;
+$$;
+
+create function public.remove_member(p_house_id uuid, p_user_id uuid)
+returns void
+language plpgsql security definer set search_path = '' as $$
+begin
+  if not private.is_house_owner(p_house_id) then raise exception 'forbidden'; end if;
+  if p_user_id = auth.uid() then raise exception 'owner_cannot_leave'; end if;
+  delete from public.house_members m
+    where m.house_id = p_house_id and m.user_id = p_user_id and m.role = 'reader';
+end;
+$$;
+
+-- Ownership transfer is out of scope for v1, so the owner cannot leave.
+create function public.leave_house(p_house_id uuid)
+returns void
+language plpgsql security definer set search_path = '' as $$
+begin
+  if auth.uid() is null then raise exception 'not_authenticated'; end if;
+  if private.is_house_owner(p_house_id) then raise exception 'owner_cannot_leave'; end if;
+  delete from public.house_members m
+    where m.house_id = p_house_id and m.user_id = auth.uid();
+end;
+$$;
+
+revoke execute on function
+  public.reset_house_password(uuid, text),
+  public.reset_house_link(uuid),
+  public.remove_member(uuid, uuid),
+  public.leave_house(uuid)
+from public, anon, service_role;
+grant execute on function
+  public.reset_house_password(uuid, text),
+  public.reset_house_link(uuid),
+  public.remove_member(uuid, uuid),
+  public.leave_house(uuid)
+to authenticated;
