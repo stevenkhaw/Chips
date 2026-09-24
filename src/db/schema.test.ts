@@ -95,4 +95,12 @@ describe('migration v3 (houses)', () => {
     const db = createTestDb();
     expect(db.all<{ name: string }>('SELECT name FROM houses').map((h) => h.name)).toEqual(['My House']);
   });
+
+  it('v4 adds sync bookkeeping to houses', () => {
+    const db = createTestDb();
+    const cols = db.all<{ name: string }>('PRAGMA table_info(houses)').map((c) => c.name);
+    expect(cols).toEqual(expect.arrayContaining(['last_synced_at', 'closed', 'pull_cursor']));
+    const h = db.first<{ closed: number; last_synced_at: number | null }>('SELECT closed, last_synced_at FROM houses');
+    expect(h).toEqual({ closed: 0, last_synced_at: null });
+  });
 });

@@ -79,4 +79,8 @@ export interface House extends BaseRow {
   joinCode: string | null;
   currencySymbol: string;
   published: boolean;
+  /** Local clock time of the last successful push (owner) or pull (reader). */
+  lastSyncedAt: number | null;
+  /** The owner deleted this house on the server; readers keep a read-only copy until they remove it. */
+  closed: boolean;
 }

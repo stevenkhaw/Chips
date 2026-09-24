@@ -3,23 +3,29 @@ import { newId, now } from '@/db/ids';
 import { mapRow } from '@/db/map';
 import type { House } from '@/domain/types';
 
-const COLS = 'id, created_at, updated_at, deleted_at, name, role, join_code, currency_symbol, published';
+const COLS = 'id, created_at, updated_at, deleted_at, name, role, join_code, currency_symbol, published, last_synced_at, closed';
 const HOUSE_TABLES_CHILD_FIRST = ['payments', 'buyins', 'session_players', 'sessions', 'players'] as const;
 
 function toHouse(row: Record<string, unknown>): House {
-  const h = mapRow<Omit<House, 'published'> & { published: number }>(row);
-  return { ...h, published: !!h.published };
+  const h = mapRow<Omit<House, 'published' | 'closed'> & { published: number; closed: number }>(row);
+  return { ...h, published: !!h.published, closed: !!h.closed };
 }
+
+/** Server limits (supabase/migrations/20260924120000_houses.sql): name 1–60, currency 1–8. */
+const NAME_MAX = 60;
+const CURRENCY_MAX = 8;
 
 function cleanName(name: string): string {
   const t = name.trim();
   if (!t) throw new Error('Name required');
+  if (t.length > NAME_MAX) throw new Error(`Name too long (${NAME_MAX} max)`);
   return t;
 }
 
 function cleanCurrency(symbol: string): string {
   const t = symbol.trim();
   if (!t) throw new Error('Currency required');
+  if (t.length > CURRENCY_MAX) throw new Error(`Currency too long (${CURRENCY_MAX} max)`);
   return t;
 }
 
@@ -76,7 +82,10 @@ export function createHouse(db: Db, input: { name: string; currencySymbol: strin
     "INSERT INTO houses (id, created_at, updated_at, deleted_at, name, role, join_code, currency_symbol, published, dirty) VALUES (?, ?, ?, NULL, ?, 'owner', NULL, ?, 0, 1)",
     [id, t, t, name, currencySymbol],
   );
-  return { id, createdAt: t, updatedAt: t, deletedAt: null, name, role: 'owner', joinCode: null, currencySymbol, published: false };
+  return {
+    id, createdAt: t, updatedAt: t, deletedAt: null, name, role: 'owner', joinCode: null, currencySymbol, published: false,
+    lastSyncedAt: null, closed: false,
+  };
 }
 
 export function renameHouse(db: Db, id: string, name: string): void {

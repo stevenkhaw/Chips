@@ -55,6 +55,12 @@ function v3Houses(db: Db): void {
   db.run("UPDATE settings SET current_house_id = ? WHERE id = 'default' AND current_house_id IS NULL", [houseId]);
 }
 
+/** v4: sync bookkeeping on houses. `pull_cursor` (v3) holds a JSON map of per-table cursors. */
+function v4Sync(db: Db): void {
+  addColumn(db, 'houses', 'last_synced_at', 'INTEGER');
+  addColumn(db, 'houses', 'closed', 'INTEGER NOT NULL DEFAULT 0');
+}
+
 export const MIGRATIONS: Migration[] = [
   // v1
   `
@@ -110,6 +116,8 @@ export const MIGRATIONS: Migration[] = [
   `,
   // v3
   v3Houses,
+  // v4
+  v4Sync,
 ];
 
 export function migrate(db: Db): void {

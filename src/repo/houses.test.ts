@@ -107,4 +107,13 @@ describe('houses repo', () => {
       expect(getCurrentHouseId(db)).toBe(id);
     });
   });
+
+  it('caps name and currency length to what the server accepts', () => {
+    const db = createTestDb();
+    expect(() => createHouse(db, { name: 'x'.repeat(61), currencySymbol: '$' })).toThrow('Name too long (60 max)');
+    expect(() => createHouse(db, { name: 'Ok', currencySymbol: '123456789' })).toThrow('Currency too long (8 max)');
+    const h = createHouse(db, { name: 'x'.repeat(60), currencySymbol: '12345678' });
+    expect(h).toEqual(expect.objectContaining({ lastSyncedAt: null, closed: false }));
+    expect(() => renameHouse(db, h.id, 'y'.repeat(61))).toThrow('Name too long (60 max)');
+  });
 });
