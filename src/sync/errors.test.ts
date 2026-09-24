@@ -39,4 +39,24 @@ describe('describeSyncError', () => {
     expect(describeSyncError(new Error('signed_out'))).toEqual({ kind: 'error', message: 'Signed out of sharing' });
     expect(describeSyncError({ code: 'signed_out', message: 'whatever' })).toEqual({ kind: 'error', message: 'Signed out of sharing' });
   });
+
+  it('treats a paused or down project (5xx, 540, HTML or non-JSON bodies) as offline (spec §7)', () => {
+    const offline = { kind: 'offline', message: "You're offline" };
+    // PostgREST behind a gateway: non-JSON body becomes { message: body }; remote.ts attaches the HTTP status.
+    expect(describeSyncError({ message: '<html><head><title>502 Bad Gateway</title></head></html>', code: '', status: 502 })).toEqual(offline);
+    expect(describeSyncError({ message: '<!DOCTYPE html><html><body>Service unavailable</body></html>', code: '' })).toEqual(offline);
+    // A paused Supabase project answers 540.
+    expect(describeSyncError({ message: 'Project paused', status: 540 })).toEqual(offline);
+    expect(describeSyncError({ message: 'upstream error', status: 503 })).toEqual(offline);
+    expect(describeSyncError({ message: 'upstream error', code: '500' })).toEqual(offline);
+    // auth-js: a non-JSON body on a non-5xx status surfaces as AuthUnknownError with the parse error.
+    expect(describeSyncError({ name: 'AuthUnknownError', message: 'Unexpected token \'<\', "<!DOCTYPE "... is not valid JSON' })).toEqual(offline);
+    expect(describeSyncError({ name: 'AuthUnknownError', message: 'JSON Parse error: Unexpected character: <' })).toEqual(offline);
+  });
+
+  it('does not mistake Postgres codes or 4xx errors for offline', () => {
+    expect(describeSyncError({ code: '23514', message: 'violates check constraint', status: 400 }).kind).toBe('error');
+    expect(describeSyncError({ code: 'P0001', message: 'forbidden', status: 400 })).toEqual({ kind: 'error', message: 'Only the owner can do that' });
+    expect(describeSyncError({ message: 'bad request', status: 404 }).kind).toBe('error');
+  });
 });
