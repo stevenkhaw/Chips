@@ -9,6 +9,8 @@ import { HouseBar } from '@/components/HouseBar';
 import { useSessionsStore } from '@/store/useSessionsStore';
 import { useSettingsStore } from '@/store/useSettingsStore';
 import { useCanEdit, useCurrentHouse } from '@/store/useHousesStore';
+import { useSyncStore } from '@/store/useSyncStore';
+import { syncHouse } from '@/store/syncActions';
 import { buildHistory } from '@/domain/history';
 import { formatSigned } from '@/domain/money';
 import { formatDate, todayIso } from '@/date';
@@ -35,6 +37,8 @@ export default function HistoryScreen() {
   const symbol = useSettingsStore((s) => s.settings.currencySymbol);
   const canEdit = useCanEdit();
   const house = useCurrentHouse();
+  const syncing = useSyncStore((s) => (house ? s.byHouse[house.id]?.phase === 'syncing' : false));
+  const onRefresh = house?.published ? () => void syncHouse(house.id) : undefined;
   const cardRef = useRef<View>(null);
   const [cardHeight, setCardHeight] = useState(0);
   const [sharing, setSharing] = useState(false);
@@ -80,7 +84,7 @@ export default function HistoryScreen() {
 
   if (nights.length === 0) {
     return (
-      <Screen scroll>
+      <Screen scroll refreshing={syncing} onRefresh={onRefresh}>
         <Headline style={s.title}>History</Headline>
         <HouseBar style={{ marginBottom: space.md }} />
         <Card>
@@ -105,7 +109,7 @@ export default function HistoryScreen() {
 
   return (
     <>
-      <Screen scroll>
+      <Screen scroll refreshing={syncing} onRefresh={onRefresh}>
         <Headline style={s.title}>History</Headline>
         <HouseBar style={{ marginBottom: space.md }} />
         <Caption style={{ marginBottom: space.lg }}>

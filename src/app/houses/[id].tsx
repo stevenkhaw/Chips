@@ -185,13 +185,18 @@ function SharingSection({ house }: { house: House }) {
   const [newPassword, setNewPassword] = useState('');
   const [resetting, setResetting] = useState(false);
   const [members, setMembers] = useState<{ me: string; members: Member[] } | null>(null);
+  const [membersError, setMembersError] = useState(false);
 
   useEffect(() => {
     void loadPassword(house.id).then(setSaved);
   }, [house.id]);
 
   const reloadMembers = useCallback(() => {
-    loadMembers(house.id).then(setMembers, fail);
+    setMembersError(false);
+    loadMembers(house.id).then(setMembers, (e) => {
+      setMembersError(true);
+      fail(e);
+    });
   }, [house.id]);
   useEffect(reloadMembers, [reloadMembers]);
 
@@ -274,7 +279,12 @@ function SharingSection({ house }: { house: House }) {
 
       <Overline style={s.section}>Members</Overline>
       <View style={s.panel}>
-        {members === null ? (
+        {membersError ? (
+          <Row style={s.memberRow}>
+            <Caption style={{ flex: 1 }}>Couldn't load members.</Caption>
+            <Button label="Retry" variant="ghost" size="md" onPress={reloadMembers} />
+          </Row>
+        ) : members === null ? (
           <Caption style={s.memberRow}>Loading…</Caption>
         ) : (
           members.members.map((m, i) => (

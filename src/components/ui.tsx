@@ -2,6 +2,7 @@ import React from 'react';
 import {
   Alert,
   Pressable,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -22,11 +23,15 @@ export function Screen({
   scroll = false,
   padded = true,
   footer,
+  refreshing,
+  onRefresh,
 }: {
   children: React.ReactNode;
   scroll?: boolean;
   padded?: boolean;
   footer?: React.ReactNode;
+  refreshing?: boolean;
+  onRefresh?: () => void;
 }) {
   const pad: ViewStyle = padded ? { paddingHorizontal: space.lg } : {};
   return (
@@ -36,7 +41,10 @@ export function Screen({
           style={s.flex}
           contentContainerStyle={[pad, { paddingBottom: space.xl }]}
           keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}>
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            onRefresh ? <RefreshControl refreshing={!!refreshing} onRefresh={onRefresh} tintColor={colors.accent} /> : undefined
+          }>
           {children}
         </ScrollView>
       ) : (

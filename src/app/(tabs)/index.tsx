@@ -8,7 +8,9 @@ import { NightRow } from '@/components/NightRow';
 import { HouseBar } from '@/components/HouseBar';
 import { useSessionsStore } from '@/store/useSessionsStore';
 import { useSettingsStore } from '@/store/useSettingsStore';
-import { useCanEdit } from '@/store/useHousesStore';
+import { useCanEdit, useCurrentHouse } from '@/store/useHousesStore';
+import { useSyncStore } from '@/store/useSyncStore';
+import { syncHouse } from '@/store/syncActions';
 import { formatCents } from '@/domain/money';
 import { colors, radius, space, textStyles } from '@/theme';
 
@@ -18,6 +20,9 @@ export default function Home() {
   const deleteSession = useSessionsStore((s) => s.deleteSession);
   const symbol = useSettingsStore((s) => s.settings.currencySymbol);
   const canEdit = useCanEdit();
+  const house = useCurrentHouse();
+  const syncing = useSyncStore((s) => (house ? s.byHouse[house.id]?.phase === 'syncing' : false));
+  const onRefresh = house?.published ? () => void syncHouse(house.id) : undefined;
 
   const totalVolumeCents = summaries.reduce((sum, x) => sum + x.totalBuyinCents, 0);
   const hasNights = summaries.length > 0;
@@ -55,7 +60,7 @@ export default function Home() {
   };
 
   return (
-    <Screen scroll>
+    <Screen scroll refreshing={syncing} onRefresh={onRefresh}>
       <Row style={s.header}>
         <ChipGlyph />
         <Headline style={s.wordmark}>CHIPS</Headline>
@@ -85,6 +90,14 @@ export default function Home() {
             Start a new night, track buy-ins, calculate splits instantly.
           </Caption>
           <Button label="Start New Night" onPress={() => router.push('/new-session')} />
+          {!hasNights ? (
+            <Button
+              label="Join a friend's house"
+              variant="secondary"
+              onPress={() => router.push('/houses/join')}
+              style={{ marginTop: space.sm }}
+            />
+          ) : null}
         </Card>
       ) : null}
 

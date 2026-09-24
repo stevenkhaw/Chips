@@ -65,6 +65,16 @@ export function HouseSwitcherSheet({ visible, onClose }: { visible: boolean; onC
           }}
           style={{ marginTop: space.sm }}
         />
+        <Button
+          label="Join house"
+          variant="secondary"
+          size="md"
+          onPress={() => {
+            onClose();
+            router.push('/houses/join');
+          }}
+          style={{ marginTop: space.sm }}
+        />
       </View>
     </Modal>
   );
