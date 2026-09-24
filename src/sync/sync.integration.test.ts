@@ -11,7 +11,7 @@ import { createTestDb } from '../../test/nodeDb';
 import { createHouse, deleteHouse, getCurrentHouseId, getHouse } from '@/repo/houses';
 import { createPlayer, renamePlayer } from '@/repo/players';
 import { addBuyin, addPayment, createSession, deleteSession, removeBuyin, setCashout } from '@/repo/sessions';
-import { getSyncHouse, SYNC_COLUMNS, pendingCount, type SyncTable } from '@/repo/sync';
+import { SYNC_COLUMNS, pendingCount, type SyncTable } from '@/repo/sync';
 import { LEDGER_TABLES } from '@/db/schema';
 import { publishHouse } from './publish';
 import { pushHouse } from './push';
@@ -56,6 +56,13 @@ export function snapshot(db: Db, houseId: string): Record<SyncTable, unknown[]> 
   return out;
 }
 
+/** Share house as the app does it: publish, then the first push (shareHouse runs it in the background). */
+async function publishAndPush(db: Db, client: SupabaseClient, houseId: string, password: string) {
+  const r = await publishHouse(db, client, houseId, password);
+  await pushHouse(db, client, houseId);
+  return r;
+}
+
 async function serverSnapshot(client: SupabaseClient, houseId: string): Promise<Record<SyncTable, unknown[]>> {
   const out = {} as Record<SyncTable, unknown[]>;
   for (const t of LEDGER_TABLES) {
@@ -84,6 +91,9 @@ describeIt('sync against local Supabase', () => {
     const { joinCode, inviteSecret } = await publishHouse(db, owner, house.id, 'hunter22');
     expect(joinCode).toMatch(/^[A-HJ-NP-Z2-9]{8}$/);
     expect(inviteSecret).toHaveLength(43);
+    // publishHouse only creates the server house and dirties every row; the caller pushes.
+    expect(pendingCount(db, house.id)).toBeGreaterThan(0);
+    expect(await pushHouse(db, owner, house.id)).toBeGreaterThan(0);
     expect(pendingCount(db, house.id)).toBe(0);
     expect(await serverSnapshot(owner, house.id)).toEqual(snapshot(db, house.id));
     const { data: serverHouse } = await owner.from('houses').select('name, currency_symbol').eq('id', house.id).single();
@@ -102,7 +112,7 @@ describeIt('sync against local Supabase', () => {
     const db = createTestDb();
     const owner = newClient();
     const { house, ann } = seedHouse(db);
-    await publishHouse(db, owner, house.id, 'hunter22');
+    await publishAndPush(db, owner, house.id, 'hunter22');
     expect(await pushHouse(db, owner, house.id)).toBe(0);
 
     db.run("UPDATE houses SET name = 'Renamed', updated_at = updated_at + 1, dirty = 1 WHERE id = ?", [house.id]);
@@ -117,7 +127,7 @@ describeIt('sync against local Supabase', () => {
     const db = createTestDb();
     const owner = newClient();
     const { house, ann, bo, night } = seedHouse(db);
-    await publishHouse(db, owner, house.id, 'hunter22');
+    await publishAndPush(db, owner, house.id, 'hunter22');
 
     // Dirty an existing session_players row so pushHouse's session_players pass runs.
     db.run("UPDATE session_players SET updated_at = updated_at + 1, dirty = 1 WHERE session_id = ?", [night.id]);
@@ -158,8 +168,8 @@ describeIt('sync against local Supabase', () => {
     const db = createTestDb();
     const owner = newClient();
     const { house } = seedHouse(db);
-    const a = await publishHouse(db, owner, house.id, 'hunter22');
-    const b = await publishHouse(db, owner, house.id, 'hunter23');
+    const a = await publishAndPush(db, owner, house.id, 'hunter22');
+    const b = await publishAndPush(db, owner, house.id, 'hunter23');
     expect(b.joinCode).toBe(a.joinCode);
     expect(b.inviteSecret).toBe(a.inviteSecret);
     expect(pendingCount(db, house.id)).toBe(0);
@@ -170,7 +180,7 @@ describeIt('sync against local Supabase', () => {
     const ownerDb = createTestDb();
     const owner = newClient();
     const { house } = seedHouse(ownerDb);
-    const { joinCode } = await publishHouse(ownerDb, owner, house.id, 'hunter22');
+    const { joinCode } = await publishAndPush(ownerDb, owner, house.id, 'hunter22');
 
     const readerDb = createTestDb();
     const reader = newClient();
@@ -185,7 +195,7 @@ describeIt('sync against local Supabase', () => {
   it('wrong code and wrong password give the same answer', async () => {
     const ownerDb = createTestDb();
     const { house } = seedHouse(ownerDb);
-    const { joinCode } = await publishHouse(ownerDb, newClient(), house.id, 'hunter22');
+    const { joinCode } = await publishAndPush(ownerDb, newClient(), house.id, 'hunter22');
     const reader = newClient();
     const db = createTestDb();
     const badPw = await joinByCode(db, reader, joinCode, 'nope');
@@ -199,7 +209,7 @@ describeIt('sync against local Supabase', () => {
     const ownerDb = createTestDb();
     const owner = newClient();
     const { house, ann, night } = seedHouse(ownerDb);
-    const { joinCode } = await publishHouse(ownerDb, owner, house.id, 'hunter22');
+    const { joinCode } = await publishAndPush(ownerDb, owner, house.id, 'hunter22');
     const readerDb = createTestDb();
     const reader = newClient();
     await joinByCode(readerDb, reader, joinCode, 'hunter22');
@@ -221,7 +231,7 @@ describeIt('sync against local Supabase', () => {
     const owner = newClient();
     const house = createHouse(ownerDb, { name: 'Big', currencySymbol: '$' });
     for (let i = 0; i < PAGE_SIZE + 20; i++) createPlayer(ownerDb, house.id, `P${i}`);
-    const { joinCode } = await publishHouse(ownerDb, owner, house.id, 'hunter22');
+    const { joinCode } = await publishAndPush(ownerDb, owner, house.id, 'hunter22');
     const readerDb = createTestDb();
     await joinByCode(readerDb, newClient(), joinCode, 'hunter22');
     expect(snapshot(readerDb, house.id).players).toHaveLength(PAGE_SIZE + 20);
@@ -230,7 +240,7 @@ describeIt('sync against local Supabase', () => {
   it('a reader cannot write to the server', async () => {
     const ownerDb = createTestDb();
     const { house, ann } = seedHouse(ownerDb);
-    const { joinCode } = await publishHouse(ownerDb, newClient(), house.id, 'hunter22');
+    const { joinCode } = await publishAndPush(ownerDb, newClient(), house.id, 'hunter22');
     const reader = newClient();
     expect(await joinByCode(createTestDb(), reader, joinCode, 'hunter22')).toEqual(
       expect.objectContaining({ ok: true, role: 'reader' }),
@@ -253,7 +263,7 @@ describeIt('sync against local Supabase', () => {
     const ownerDb = createTestDb();
     const owner = newClient();
     const { house } = seedHouse(ownerDb);
-    const { joinCode } = await publishHouse(ownerDb, owner, house.id, 'hunter22');
+    const { joinCode } = await publishAndPush(ownerDb, owner, house.id, 'hunter22');
 
     const r1Db = createTestDb();
     const r1 = newClient();
@@ -283,7 +293,7 @@ describeIt('sync against local Supabase', () => {
     const db = createTestDb();
     const owner = newClient();
     const { house, ann } = seedHouse(db);
-    const { joinCode } = await publishHouse(db, owner, house.id, 'hunter22');
+    const { joinCode } = await publishAndPush(db, owner, house.id, 'hunter22');
 
     // A local, unpushed edit that a wrongful pull-over-self would clobber.
     db.run("UPDATE houses SET name = 'Local only', updated_at = updated_at + 1, dirty = 1 WHERE id = ?", [house.id]);
@@ -312,7 +322,7 @@ describeIt('sync against local Supabase', () => {
     const ownerDb = createTestDb();
     const owner = newClient();
     const { house } = seedHouse(ownerDb);
-    const { joinCode } = await publishHouse(ownerDb, owner, house.id, 'hunter22');
+    const { joinCode } = await publishAndPush(ownerDb, owner, house.id, 'hunter22');
 
     const readerDb = createTestDb();
     const reader = newClient();

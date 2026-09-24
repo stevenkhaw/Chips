@@ -1,22 +1,33 @@
 jest.mock('@/sync/push', () => ({ pushHouse: jest.fn() }));
 jest.mock('@/sync/pull', () => ({ pullHouse: jest.fn() }));
+jest.mock('@/sync/remote', () => ({
+  ...jest.requireActual('@/sync/remote'),
+  ensureSession: jest.fn(),
+  rpcCreateHouse: jest.fn(),
+  rpcLeaveHouse: jest.fn(),
+}));
 
 import { createTestDb } from '../../test/nodeDb';
 import { setDb } from '@/db/connection';
-import { getCurrentHouseId, setCurrentHouse } from '@/repo/houses';
+import { createHouse, getCurrentHouseId, getHouse, setCurrentHouse } from '@/repo/houses';
 import { createSession } from '@/repo/sessions';
 import { markPublished, insertJoinedHouse, type ServerHouse } from '@/repo/sync';
 import { setSyncClient } from '@/sync/registry';
 import { pushHouse } from '@/sync/push';
 import { pullHouse } from '@/sync/pull';
 import { reloadAll } from './houseActions';
-import { PUSH_DEBOUNCE_MS, pushDirtyHouses, schedulePush, syncHouse, startSync } from './syncActions';
+import { ensureSession, rpcCreateHouse, rpcLeaveHouse } from '@/sync/remote';
+import { loadPassword } from '@/sync/passwords';
+import { PUSH_DEBOUNCE_MS, leaveHouse, pushDirtyHouses, schedulePush, shareHouse, syncHouse, startSync } from './syncActions';
 import { useSessionsStore } from './useSessionsStore';
 import { useSyncStore } from './useSyncStore';
 import { getDb } from '@/db/connection';
 
 const push = pushHouse as jest.Mock;
 const pull = pullHouse as jest.Mock;
+const session = ensureSession as jest.Mock;
+const createRpc = rpcCreateHouse as jest.Mock;
+const leaveRpc = rpcLeaveHouse as jest.Mock;
 
 describe('syncActions', () => {
   let houseId: string;
@@ -31,6 +42,9 @@ describe('syncActions', () => {
     setSyncClient({} as never);
     push.mockReset();
     pull.mockReset();
+    session.mockReset();
+    createRpc.mockReset();
+    leaveRpc.mockReset();
     useSyncStore.setState({ byHouse: {}, pending: {} });
   });
 
@@ -179,5 +193,23 @@ describe('syncActions', () => {
     stop();
     await jest.advanceTimersByTimeAsync(PUSH_DEBOUNCE_MS * 2);
     expect(push).not.toHaveBeenCalled();
+  });
+
+  it('shareHouse keeps the password and the published state when the first push fails', async () => {
+    const db = getDb();
+    const house = createHouse(db, { name: 'Share Me', currencySymbol: '$' });
+    session.mockResolvedValue('user-1');
+    createRpc.mockResolvedValue({ join_code: 'K7QXM2PA', invite_secret: 's'.repeat(43) });
+    push.mockRejectedValue(new TypeError('Network request failed'));
+
+    await expect(shareHouse(house.id, 'hunter22')).resolves.toEqual({ joinCode: 'K7QXM2PA' });
+    expect(await loadPassword(house.id)).toBe('hunter22');
+    expect(getHouse(db, house.id)).toEqual(expect.objectContaining({ published: true, joinCode: 'K7QXM2PA' }));
+
+    // The push runs in the background and its failure lands in the status line.
+    await jest.advanceTimersByTimeAsync(0);
+    expect(push).toHaveBeenCalled();
+    expect(useSyncStore.getState().byHouse[house.id]).toEqual({ phase: 'offline', message: "You're offline" });
+    expect(useSyncStore.getState().pending[house.id]).toBeGreaterThan(0);
   });
 });

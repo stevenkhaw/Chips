@@ -2,11 +2,12 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Db } from '@/db/types';
 import { dirtyAllInHouse, getSyncHouse, markPublished } from '@/repo/sync';
 import { ensureSession, rpcCreateHouse } from './remote';
-import { pushHouse } from './push';
 
 /**
- * Share house (spec §2.2): sign in if needed, create the server house (safe to retry),
- * mark the local house published, then push every row.
+ * Share house (spec §2.2): sign in if needed, create the server house (safe to retry) and mark
+ * the local house published with every row dirty. It does NOT push: the caller saves the
+ * password first and then pushes, so a failed first push can't lose the password (the rows stay
+ * dirty and the next sync retries them).
  */
 export async function publishHouse(
   db: Db,
@@ -29,6 +30,5 @@ export async function publishHouse(
   // redoes both steps safely.
   dirtyAllInHouse(db, houseId);
   markPublished(db, houseId, created.join_code);
-  await pushHouse(db, client, houseId);
   return { joinCode: created.join_code, inviteSecret: created.invite_secret };
 }

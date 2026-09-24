@@ -169,12 +169,17 @@ export function startSync(): () => void {
 
 // UI actions ------------------------------------------------------------------------------------
 
+/**
+ * Publishes the house, then saves the password and reloads before the first push, so a failed
+ * push can't lose the password. The push runs in the background; its outcome shows in the status line.
+ */
 export async function shareHouse(houseId: string, password: string): Promise<{ joinCode: string }> {
   const client = requireSyncClient();
   const { joinCode } = await publishHouse(getDb(), client, houseId, password);
   await savePassword(houseId, password);
   useHousesStore.getState().load();
   refreshPending();
+  void syncHouse(houseId);
   return { joinCode };
 }
 
