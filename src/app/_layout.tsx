@@ -60,9 +60,14 @@ export default function RootLayout() {
       setDb(db);
       reloadAll();
       setReady(true);
-      setSyncClient(createAppSyncClient());
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
+      return;
+    }
+    try {
+      setSyncClient(createAppSyncClient());
+    } catch (e) {
+      console.warn('Failed to set up sync client:', e);
     }
   }, []);
 

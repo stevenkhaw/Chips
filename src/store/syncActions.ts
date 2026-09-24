@@ -14,6 +14,7 @@ import { reloadAll } from './houseActions';
 import { useHousesStore } from './useHousesStore';
 import { usePlayersStore } from './usePlayersStore';
 import { useSessionsStore } from './useSessionsStore';
+import { useSettingsStore } from './useSettingsStore';
 import { useSyncStore } from './useSyncStore';
 
 export const PUSH_DEBOUNCE_MS = 2000;
@@ -35,6 +36,21 @@ export function syncHouse(houseId: string): Promise<void> {
   return p;
 }
 
+/**
+ * Refreshes local stores from what a reader pull just wrote, without touching the open session
+ * detail. `reloadAll` resets `detail` to null, which leaves an open session screen stuck on
+ * "Loading…" since screens only call `open(id)` when `id` changes; this refreshes every other
+ * house-scoped store and, only if a detail is open, recomputes it in place (`refreshDetail` sets
+ * it to null itself if the session no longer exists after the pull).
+ */
+function refreshCurrentHouseViews(): void {
+  useHousesStore.getState().load();
+  useSettingsStore.getState().load();
+  usePlayersStore.getState().load();
+  useSessionsStore.getState().loadSummaries();
+  if (useSessionsStore.getState().detail) useSessionsStore.getState().refreshDetail();
+}
+
 async function runSync(houseId: string): Promise<void> {
   const client = getSyncClient();
   if (!client) return;
@@ -54,7 +70,7 @@ async function runSync(houseId: string): Promise<void> {
         reloadAll();
         Alert.alert('Removed from house', `You no longer have access to "${h.name}".`);
       } else if (houseId === useHousesStore.getState().currentHouseId) {
-        reloadAll();
+        refreshCurrentHouseViews();
       }
     }
     useSyncStore.getState().setPhase(houseId, 'idle');
@@ -67,10 +83,20 @@ async function runSync(houseId: string): Promise<void> {
   }
 }
 
+/**
+ * Pushes every owner house with pending rows. If a house is already syncing, waits for that run
+ * and then re-checks: a write that lands mid-push is not silently dropped until the next trigger.
+ * Skips a house currently marked offline so this can't spin against a dead network.
+ */
 export async function pushDirtyHouses(): Promise<void> {
   const db = getDb();
   for (const h of syncRepo.listSyncHouses(db)) {
-    if (h.role === 'owner' && syncRepo.pendingCount(db, h.id) > 0) await syncHouse(h.id);
+    if (h.role !== 'owner') continue;
+    const running = inflight.get(h.id);
+    if (running) await running;
+    if (syncRepo.pendingCount(db, h.id) > 0 && useSyncStore.getState().byHouse[h.id]?.phase !== 'offline') {
+      await syncHouse(h.id);
+    }
   }
 }
 
@@ -98,8 +124,10 @@ const houseSignature = (s: ReturnType<typeof useHousesStore.getState>) =>
 
 /**
  * Wires sync into the app. Store changes that come from local writes schedule a push; switching house
- * or returning to the foreground syncs. Sync's own reloads do not change house `updatedAt`, so a failing
- * push cannot loop. Returns an unsubscribe function.
+ * or returning to the foreground syncs. This cannot loop against a failing push: `pushDirtyHouses` only
+ * ever pushes, never pulls, so it triggers no store subscriber; and a successful owner push only sets
+ * `last_synced_at`, which is not part of `houseSignature`, so it doesn't re-trigger `schedulePush` either.
+ * Returns an unsubscribe function.
  */
 export function startSync(): () => void {
   const unsubs = [
@@ -122,6 +150,10 @@ export function startSync(): () => void {
   return () => {
     unsubs.forEach((u) => u());
     app.remove();
+    if (timer) {
+      clearTimeout(timer);
+      timer = null;
+    }
   };
 }
 
@@ -148,11 +180,13 @@ export async function joinHouse(code: string, password: string, displayName: str
 
 export async function leaveHouse(houseId: string): Promise<void> {
   await rpcLeaveHouse(requireSyncClient(), houseId);
+  await inflight.get(houseId)?.catch(() => {});
   syncRepo.purgeHouse(getDb(), houseId);
   reloadAll();
 }
 
-export function removeClosedHouse(houseId: string): void {
+export async function removeClosedHouse(houseId: string): Promise<void> {
+  await inflight.get(houseId)?.catch(() => {});
   syncRepo.purgeHouse(getDb(), houseId);
   reloadAll();
 }
