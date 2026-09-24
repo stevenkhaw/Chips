@@ -5,6 +5,7 @@ import {
   Body, Button, Caption, Card, ChipGlyph, Divider, Headline, IconButton, Overline, Row, Screen, StatTile, Title, toastError,
 } from '@/components/ui';
 import { NightRow } from '@/components/NightRow';
+import { HouseBar } from '@/components/HouseBar';
 import { useSessionsStore } from '@/store/useSessionsStore';
 import { useSettingsStore } from '@/store/useSettingsStore';
 import { formatCents } from '@/domain/money';
@@ -55,6 +56,8 @@ export default function Home() {
         <View style={{ width: space.sm }} />
         <IconButton glyph="⚙︎" onPress={() => router.push('/settings')} accessibilityLabel="Settings" variant="circle" />
       </Row>
+
+      <HouseBar style={{ marginBottom: space.lg }} />
 
       {hasNights ? (
         <Row style={{ marginBottom: space.md }}>

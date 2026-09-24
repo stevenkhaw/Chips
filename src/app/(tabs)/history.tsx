@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 import { Avatar, Body, Button, Caption, Card, Divider, Headline, Overline, Row, Screen, Title } from '@/components/ui';
 import { MoneyText } from '@/components/MoneyText';
 import { BalanceChart } from '@/components/BalanceChart';
+import { HouseBar } from '@/components/HouseBar';
 import { useSessionsStore } from '@/store/useSessionsStore';
 import { useSettingsStore } from '@/store/useSettingsStore';
 import { buildHistory } from '@/domain/history';
@@ -28,6 +29,7 @@ export default function HistoryScreen() {
     return (
       <Screen scroll>
         <Headline style={s.title}>History</Headline>
+        <HouseBar style={{ marginBottom: space.md }} />
         <Card>
           <Title>Nothing to chart yet</Title>
           <Caption style={{ marginTop: space.xs, marginBottom: space.lg }}>
@@ -51,6 +53,7 @@ export default function HistoryScreen() {
   return (
     <Screen scroll>
       <Headline style={s.title}>History</Headline>
+      <HouseBar style={{ marginBottom: space.md }} />
       <Caption style={{ marginBottom: space.lg }}>
         {nights.length} night{nights.length === 1 ? '' : 's'} · {players.length} player{players.length === 1 ? '' : 's'}
       </Caption>
