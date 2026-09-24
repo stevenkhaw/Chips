@@ -10,6 +10,11 @@ import { colors, fonts } from '@/theme';
 
 export const HISTORY_CARD_WIDTH = 1080;
 
+/** Outer breathing room between the canvas edge and the card (`s.canvas.padding`). */
+const CANVAS_PADDING = 40;
+/** The card's own border (`s.card.borderWidth`); counts against the usable content width. */
+const CARD_BORDER_WIDTH = 2;
+/** Inner padding between the card's border and its content (`s.card.padding`). */
 const PAD = 56;
 /** Most recent nights shown on the card; the rest collapse into "+K earlier nights". */
 const MAX_NIGHTS = 12;
@@ -17,8 +22,6 @@ const MAX_NIGHTS = 12;
 const NIGHT_COL = 260;
 /** Smallest a player column can shrink to before we drop players from the table. */
 const MIN_PLAYER_COL = 96;
-/** Most player columns the card will ever try to lay out before falling back to the CSV/text note. */
-const MAX_PLAYER_COLS = 8;
 
 const netColor = (v: number | null) => (v === null ? colors.textMuted : v > 0 ? colors.pos : v < 0 ? colors.neg : colors.textDim);
 
@@ -38,12 +41,12 @@ export const HistoryShareCard = forwardRef<
   const title = houseName?.trim() ? houseName : 'History';
   const lastDate = nights[nights.length - 1]?.session.date;
 
-  // Fit player columns into the card width; if even the minimum doesn't fit everyone,
+  // Fit player columns into the card's actual content width (canvas padding + card border +
+  // card padding all eat into HISTORY_CARD_WIDTH); if even the minimum doesn't fit everyone,
   // show the top players by standing and point to the CSV/text for the rest.
-  const innerWidth = HISTORY_CARD_WIDTH - PAD * 2;
+  const innerWidth = HISTORY_CARD_WIDTH - (CANVAS_PADDING + CARD_BORDER_WIDTH + PAD) * 2;
   const availForPlayers = Math.max(innerWidth - NIGHT_COL, 0);
-  const maxByWidth = Math.max(1, Math.floor(availForPlayers / MIN_PLAYER_COL));
-  const maxCols = Math.min(MAX_PLAYER_COLS, maxByWidth);
+  const maxCols = Math.max(1, Math.floor(availForPlayers / MIN_PLAYER_COL));
   const shownPlayers = players.slice(0, maxCols);
   const hiddenPlayerCount = players.length - shownPlayers.length;
   const playerColWidth = shownPlayers.length > 0 ? Math.max(availForPlayers / shownPlayers.length, MIN_PLAYER_COL) : MIN_PLAYER_COL;
@@ -134,7 +137,7 @@ export const HistoryShareCard = forwardRef<
                   <Text
                     key={p.playerId}
                     style={[s.tableCell, { width: playerColWidth, color: net === null || net === undefined ? colors.textMuted : netColor(net) }]}>
-                    {net === null ? 'pending' : net === undefined ? '—' : formatSigned(net, symbol)}
+                    {net === null || net === undefined ? '—' : formatSigned(net, symbol)}
                   </Text>
                 );
               })}
@@ -166,11 +169,11 @@ export const HistoryShareCard = forwardRef<
 });
 
 const s = StyleSheet.create({
-  canvas: { width: HISTORY_CARD_WIDTH, backgroundColor: colors.bg, padding: 40 },
+  canvas: { width: HISTORY_CARD_WIDTH, backgroundColor: colors.bg, padding: CANVAS_PADDING },
   card: {
     backgroundColor: colors.card,
     borderRadius: 48,
-    borderWidth: 2,
+    borderWidth: CARD_BORDER_WIDTH,
     borderColor: colors.border,
     padding: PAD,
   },

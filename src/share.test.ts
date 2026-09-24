@@ -90,12 +90,23 @@ describe('buildHistoryCsv', () => {
     expect(lines[0]).toBe('Night,Date,"Smith, Jr."');
     expect(lines[1]).toBe('"Bob\'s ""Big"" Night",2026-09-01,5.00');
   });
+
+  it('quotes a title containing a carriage return (RFC 4180)', () => {
+    const n1 = night('s1', '2026-09-01', 'Line one\r\nLine two', [{ p: ann, buyin: 2000, cashout: 2500 }]);
+    const h = buildHistory([n1]);
+    const csv = buildHistoryCsv(h);
+    const lines = csv.split('\n');
+    // The quoted field itself contains a literal \r\n, so splitting on '\n' alone still
+    // shows the row starting with the opening quote.
+    expect(lines[1].startsWith('"Line one\r')).toBe(true);
+  });
 });
 
 describe('buildHistoryShareText', () => {
   const n1 = night('s1', '2026-09-01', 'Opening Night', [
     { p: ann, buyin: 2000, cashout: 5000 },
     { p: bob, buyin: 2000, cashout: 0 },
+    { p: cat, buyin: 2000, cashout: 2000 },
   ]);
   const n2 = night('s2', '2026-09-08', 'Second Night', [
     { p: ann, buyin: 2000, cashout: null },
@@ -119,6 +130,15 @@ describe('buildHistoryShareText', () => {
     expect(nightLine).toBeDefined();
     expect(nightLine).toContain('Ann');
     expect(nightLine).toContain('pending');
+  });
+
+  it('omits a player from a night line they did not attend', () => {
+    const text = buildHistoryShareText(h, '$');
+    const lines = text.split('\n');
+    const openingLine = lines.find((l) => l.includes('Opening Night'))!;
+    const secondLine = lines.find((l) => l.includes('Second Night'))!;
+    expect(openingLine).toContain('Cat'); // Cat played night 1
+    expect(secondLine).not.toContain('Cat'); // ...but not night 2
   });
 
   it('shows newest nights first', () => {

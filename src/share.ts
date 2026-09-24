@@ -121,7 +121,7 @@ export function buildHistoryShareText(history: History, symbol: string): string 
 
 /** RFC 4180 field quoting: wraps and doubles quotes when the value contains a comma, quote, or newline. */
 function csvField(value: string): string {
-  if (/[",\n]/.test(value)) return `"${value.replace(/"/g, '""')}"`;
+  if (/[",\r\n]/.test(value)) return `"${value.replace(/"/g, '""')}"`;
   return value;
 }
 
