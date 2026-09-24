@@ -1,4 +1,4 @@
-# Handoff: Chips shared houses (after phase 1, before phase 2)
+# Handoff: Chips shared houses (after phase 2, before phase 3)
 
 Date: 2026-09-24. Repo: `stevenkhaw/Chips`, branch `main` @ `5747fac`, pushed.
 
@@ -20,7 +20,7 @@ linking, deletion, privacy → 6 Android build + TestFlight public link.
 | Tests | 126 Jest tests pass, `npx tsc --noEmit` clean, `npx expo export --platform ios` OK |
 | TestFlight | EAS production build 6 (id `75bef88f-ea78-4fa6-af1d-37f1971db6d8`) submitted 2026-09-23 with `--auto-submit`. Not yet confirmed on device. |
 | Steven's real data | Lives in the TestFlight app. Migration v3 runs on it the first time build 6 opens. Steven made his own backup. |
-| Phase 2 | Not started. No plan file yet. |
+| Phase 2 | Done on `feat/supabase-phase2`, pushed to the hosted Supabase project 2026-09-24. See below. |
 
 ### To confirm on the phone (build 6)
 
@@ -54,47 +54,65 @@ linking, deletion, privacy → 6 Android build + TestFlight public link.
   `EditorOnly` guard on the live table, new-night flow (both steps) and
   players screen; settle screen hides payment logging for readers.
 
-## Phase 2: Supabase schema, RLS, RPCs (next)
+## Phase 2: Supabase schema, RLS, RPCs (done 2026-09-24)
 
-Server only. The app does not talk to Supabase until phase 3.
+Branch `feat/supabase-phase2` (not merged). Plan:
+`docs/superpowers/plans/2026-09-24-shared-houses-phase2-supabase.md`.
+Migrations `20260924120000_houses.sql`, `20260924120100_ledger.sql` and
+`20260924120200_house_rpcs.sql` were pushed to the hosted project on
+2026-09-24; `supabase migration list` shows local = remote. There are 138
+pgTAP assertions in `supabase/tests/`, run with `supabase test db` (needs
+OrbStack running). The local stack runs only db, auth and kong: the other
+services are disabled in `supabase/config.toml` to save disk. The repo is
+linked (`supabase/.temp/`, gitignored).
 
-**Steven does first:** create a Supabase project (free tier) and note its URL
-and publishable/anon key; enable anonymous sign-ins. Supabase CLI 2.117.0 is installed (2026-09-24).
-Docker runs through OrbStack (context `orbstack`); open OrbStack before
-`supabase start` / `supabase test db`, which need it.
+### Phase 3 must know
 
-**Planned tasks (to be written up with superpowers:writing-plans):**
+- **Join RPCs return jsonb and never raise for a bad code or secret:**
+  - `{ok:true, house:{…}, role:'owner'|'reader'}`
+  - `{ok:false, error:'invalid'}`
+  - `{ok:false, error:'locked', minutes:N}`
 
-1. `supabase init`; SQL migrations live in `supabase/migrations/`; run a
-   local stack with `supabase start`.
-2. Tables: `houses` (owner_id, 8-char `join_code` without look-alike chars,
-   currency, soft delete), `house_secrets` (bcrypt `password_hash` via
-   `pgcrypto`, 32-byte `invite_secret`), `house_members` (role
-   owner/reader), `join_attempts`, and the five ledger tables mirroring the
-   local columns plus `house_id` and a trigger-set `server_updated_at`.
-3. RLS: members select; only `houses.owner_id` inserts/updates; no deletes
-   (soft only); `house_secrets` owner-only.
-4. **Same-house integrity (parked from the phase 1 review):** triggers or
-   checks so a child row's `house_id` equals its parent's, and a session
-   player / payment only references players from the same house.
-5. RPCs (`SECURITY DEFINER`): `create_house(id, name, currency, password)`
-   returning `join_code` + `invite_secret`; `join_house(code, password)` with
-   a 5-failures-in-15-minutes lockout and one `invalid` error for wrong code
-   or password; `join_house_by_link(house_id, secret)`;
-   `reset_house_password`, `reset_house_link`, `remove_member`,
-   `leave_house`.
-6. pgTAP tests (`supabase test db`): reader cannot write any ledger row;
-   non-member sees nothing incl. secrets; owner of A cannot write B; lockout
-   on attempt 6; identical errors; rotated secret kills old link;
-   cross-house child rows rejected.
-7. `supabase db push` to the hosted project once tests pass.
-
-Open choice for the phase 2 plan: RPC for account deletion now or in phase 5
-(spec puts it in phase 5).
+  Signatures: `join_house(code, password, display_name?)` and
+  `join_house_by_link(house_id, secret, display_name?)`. Store the returned
+  `role`: an owner who taps their own invite gets `owner`.
+- **Other RPCs raise P0001** with one of these messages: `not_authenticated`,
+  `forbidden`, `weak_password` (fewer than 4 characters), `house_deleted`,
+  `owner_cannot_leave`.
+  - `create_house(id, name, currency, password, display_name?)` returns
+    `(join_code, invite_secret)` and is safe to retry.
+  - `remove_member` returns the **new** invite secret, because the old link
+    dies. Prompt the owner to reset the password too.
+- **Postgres errors the app must map to messages:**
+  - `23514` (check): house name 1–60 characters, currency 1–8, display name
+    1–40. Enforce the same limits in the repo and UI; locally, `cleanName`
+    and `cleanCurrency` only trim.
+  - `23502`: null name or currency.
+- **Pushing the house row:** `update houses` with only `name`,
+  `currency_symbol`, `updated_at` and `deleted_at`. Any other column returns
+  42501, and there is no insert grant; `create_house` makes the row.
+- **Pushing ledger rows:** upsert in FK order (players → sessions →
+  session_players → buyins → payments). Composite FKs `(parent_id, house_id)`
+  reject any child whose house differs from its parent's, and `house_id` is
+  immutable.
+- **Pull cursor:**
+  - Keep the exact timestamptz text returned for `server_updated_at`, with
+    its microseconds (a JS `Date` truncates them), plus the last `id`.
+  - Page with `or=(server_updated_at.gt.T,and(server_updated_at.eq.T,id.gt.I))`
+    ordered by `server_updated_at,id`.
+  - Re-read a few seconds of overlap on each pull. Rows are stamped when
+    written, not when committed; pull is idempotent, so the overlap is harmless.
+- **Removed or closed:** no `house_members` row for the caller means
+  "removed". `houses.deleted_at` set means "House closed".
+- **Hosted Security Advisor:** it will warn that SECURITY DEFINER functions in
+  `public` are executable by `authenticated`. That is intended.
+- **Keys:** `EXPO_PUBLIC_SUPABASE_URL` and the publishable key go in EAS env,
+  never in git. Anonymous sign-ins are enabled in the dashboard.
+- **Account deletion RPC:** phase 5, as Steven decided.
 
 ## Parked / deferred items
 
-- Server must enforce same-house parent/player refs (phase 2, task 4 above).
+- ~~Server must enforce same-house parent/player refs~~ done in phase 2 (composite FKs).
 - `HouseSwitcherSheet` still shows "House settings" to readers; the screen
   itself is read-only for them. Add **Leave house** there in phase 3.
 - Dev `previewAsReader` persists across `switchHouse`; the switcher pill says
@@ -122,6 +140,9 @@ Open choice for the phase 2 plan: RPC for account deletion now or in phase 5
 ## Next steps
 
 1. Steven installs build 6 from TestFlight and runs the checklist above.
-2. Steven creates the Supabase project and installs the CLI.
-3. New session: invoke superpowers:writing-plans for phase 2 from the spec
-   and this handoff, then execute with superpowers:subagent-driven-development.
+2. Steven checks branch `feat/history-dotted-gaps` in Expo Go. It draws a
+   dotted History line where a player missed a night. Then merge it.
+3. Merge `feat/supabase-phase2` into `main`. Server-only, safe to merge.
+4. New session: superpowers:writing-plans for phase 3 (share, join by code,
+   push/pull, sync status) from the spec, using the "Phase 3 must know" notes
+   above. Re-enable `[api]` in `supabase/config.toml` for local REST testing.
