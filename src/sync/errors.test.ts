@@ -7,6 +7,17 @@ describe('describeSyncError', () => {
     expect(describeSyncError({ message: 'TypeError: Failed to fetch' })).toEqual({ kind: 'offline', message: "You're offline" });
   });
 
+  it('treats AbortError and AuthRetryableFetchError as offline', () => {
+    const abort = new Error('The operation was aborted');
+    abort.name = 'AbortError';
+    expect(describeSyncError(abort)).toEqual({ kind: 'offline', message: "You're offline" });
+
+    expect(describeSyncError({ name: 'AuthRetryableFetchError', message: 'fetch failed after retries' })).toEqual({
+      kind: 'offline',
+      message: "You're offline",
+    });
+  });
+
   it('maps RPC messages and Postgres codes', () => {
     expect(describeSyncError({ code: 'P0001', message: 'weak_password' }).message).toBe('Password needs at least 4 characters');
     expect(describeSyncError({ code: 'P0001', message: 'forbidden' }).message).toBe('Only the owner can do that');

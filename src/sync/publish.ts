@@ -23,9 +23,12 @@ export async function publishHouse(
   const created = await rpcCreateHouse(client, { id: h.id, name: h.name, currency: h.currencySymbol, password });
   // markPublished and dirtyAllInHouse are each already atomic (dirtyAllInHouse wraps its own
   // transaction); Db.transaction() (both the expo and in-memory adapters) does not support
-  // nesting, so they run sequentially rather than inside a second, outer transaction.
-  markPublished(db, houseId, created.join_code);
+  // nesting, so they run sequentially rather than inside a second, outer transaction. dirtyAllInHouse
+  // runs first: a crash between the two leaves an unpublished house with dirty rows, which is its
+  // normal (pre-publish) state, and create_house is idempotent so the next publishHouse retry just
+  // redoes both steps safely.
   dirtyAllInHouse(db, houseId);
+  markPublished(db, houseId, created.join_code);
   await pushHouse(db, client, houseId);
   return { joinCode: created.join_code, inviteSecret: created.invite_secret };
 }

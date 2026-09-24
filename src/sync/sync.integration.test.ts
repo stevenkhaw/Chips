@@ -8,13 +8,14 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { ensureSession } from './remote';
 import type { Db } from '@/db/types';
 import { createTestDb } from '../../test/nodeDb';
-import { createHouse } from '@/repo/houses';
+import { createHouse, getCurrentHouseId } from '@/repo/houses';
 import { createPlayer } from '@/repo/players';
-import { addBuyin, addPayment, createSession, setCashout } from '@/repo/sessions';
+import { addBuyin, addPayment, createSession, removeBuyin, setCashout } from '@/repo/sessions';
 import { SYNC_COLUMNS, pendingCount, type SyncTable } from '@/repo/sync';
 import { LEDGER_TABLES } from '@/db/schema';
 import { publishHouse } from './publish';
 import { pushHouse } from './push';
+import * as remote from './remote';
 
 const URL = process.env.CHIPS_SUPABASE_URL;
 const KEY = process.env.CHIPS_SUPABASE_KEY;
@@ -33,6 +34,8 @@ export function seedHouse(db: Db, name = 'IT Crew') {
   const sps = db.all<{ id: string }>('SELECT id FROM session_players WHERE session_id = ? ORDER BY sort_order', [night.id]);
   addBuyin(db, sps[0].id, 2000);
   addBuyin(db, sps[1].id, 2000);
+  const extra = addBuyin(db, sps[1].id, 500);
+  removeBuyin(db, extra.id); // a soft-deleted row, so snapshot equality also covers deleted_at
   setCashout(db, sps[0].id, 3000);
   setCashout(db, sps[1].id, 1000);
   addPayment(db, night.id, { fromPlayerId: bo.id, toPlayerId: ann.id, amountCents: 1000 });
@@ -78,6 +81,16 @@ describeIt('sync against local Supabase', () => {
     expect(inviteSecret).toHaveLength(43);
     expect(pendingCount(db, house.id)).toBe(0);
     expect(await serverSnapshot(owner, house.id)).toEqual(snapshot(db, house.id));
+    const { data: serverHouse } = await owner.from('houses').select('name, currency_symbol').eq('id', house.id).single();
+    expect(serverHouse?.name).toBe(house.name);
+    expect(serverHouse?.currency_symbol).toBe(house.currencySymbol);
+  });
+
+  it('does not push an unpublished house', async () => {
+    const db = createTestDb();
+    const owner = newClient();
+    const myHouseId = getCurrentHouseId(db);
+    expect(await pushHouse(db, owner, myHouseId)).toBe(0);
   });
 
   it('pushes the house row and later edits, and nothing when clean', async () => {
@@ -95,6 +108,47 @@ describeIt('sync against local Supabase', () => {
     expect(await serverSnapshot(owner, house.id)).toEqual(snapshot(db, house.id));
   });
 
+  it('is immune to a row created mid-push (transient FK race)', async () => {
+    const db = createTestDb();
+    const owner = newClient();
+    const { house, ann, bo, night } = seedHouse(db);
+    await publishHouse(db, owner, house.id, 'hunter22');
+
+    // Dirty an existing session_players row so pushHouse's session_players pass runs.
+    db.run("UPDATE session_players SET updated_at = updated_at + 1, dirty = 1 WHERE session_id = ?", [night.id]);
+
+    // While that pass is in flight (mid-push, between two awaits), simulate a live night: a new
+    // session with its own session_player + buy-in appears. With the old, buggy pushHouse this
+    // new buy-in would be read fresh at the buyins pass (which runs after session_players) and get
+    // pushed even though its parent session_player was created too late to be part of this push —
+    // a transient FK violation (23503). The fix snapshots every table's dirty rows before the
+    // first await, so the new rows are simply left dirty for the next push instead.
+    const realUpsertRows = remote.upsertRows.bind(remote);
+    const upsertSpy = jest.spyOn(remote, 'upsertRows');
+    let injected = false;
+    upsertSpy.mockImplementation(async (client, table, rows) => {
+      if (table === 'session_players' && !injected) {
+        injected = true;
+        const night2 = createSession(db, house.id, {
+          date: '2026-09-25', title: 'Night 2', defaultBuyinCents: 1000, playerIds: [ann.id, bo.id],
+        });
+        const sps2 = db.all<{ id: string }>('SELECT id FROM session_players WHERE session_id = ? ORDER BY sort_order', [night2.id]);
+        addBuyin(db, sps2[0].id, 1000);
+      }
+      return realUpsertRows(client, table, rows);
+    });
+
+    await expect(pushHouse(db, owner, house.id)).resolves.toBeGreaterThan(0);
+    upsertSpy.mockRestore();
+
+    // The mid-push row is excluded from that push and stays dirty...
+    expect(pendingCount(db, house.id)).toBeGreaterThan(0);
+    // ...and a follow-up push picks it up cleanly.
+    expect(await pushHouse(db, owner, house.id)).toBeGreaterThan(0);
+    expect(pendingCount(db, house.id)).toBe(0);
+    expect(await serverSnapshot(owner, house.id)).toEqual(snapshot(db, house.id));
+  });
+
   it('publish is safe to retry', async () => {
     const db = createTestDb();
     const owner = newClient();
@@ -102,5 +156,8 @@ describeIt('sync against local Supabase', () => {
     const a = await publishHouse(db, owner, house.id, 'hunter22');
     const b = await publishHouse(db, owner, house.id, 'hunter23');
     expect(b.joinCode).toBe(a.joinCode);
+    expect(b.inviteSecret).toBe(a.inviteSecret);
+    expect(pendingCount(db, house.id)).toBe(0);
+    expect(await serverSnapshot(owner, house.id)).toEqual(snapshot(db, house.id));
   });
 });

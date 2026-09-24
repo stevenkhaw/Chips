@@ -13,13 +13,16 @@ const RPC_MESSAGES: Record<string, string> = {
 
 const OFFLINE = /network request failed|fetch failed|failed to fetch|network error|timed out/i;
 
+const OFFLINE_NAMES = new Set(['AbortError', 'AuthRetryableFetchError']);
+
 /** Turns anything a sync call can throw into what the UI shows. */
 export function describeSyncError(e: unknown): SyncErrorInfo {
-  const err = (e ?? {}) as { code?: unknown; message?: unknown };
+  const err = (e ?? {}) as { code?: unknown; message?: unknown; name?: unknown };
   const message = typeof err.message === 'string' ? err.message : typeof e === 'string' ? e : String(e);
   const code = typeof err.code === 'string' ? err.code : '';
+  const name = typeof err.name === 'string' ? err.name : '';
 
-  if (OFFLINE.test(message)) return { kind: 'offline', message: "You're offline" };
+  if (OFFLINE.test(message) || OFFLINE_NAMES.has(name)) return { kind: 'offline', message: "You're offline" };
   if (code === 'P0001' && RPC_MESSAGES[message]) return { kind: 'error', message: RPC_MESSAGES[message] };
   if (code === '23514') return { kind: 'error', message: 'A name or symbol is too long' };
   if (code === '42501') {
