@@ -1,4 +1,4 @@
-import { APP_SCHEME, INVITE_WEB_BASE, buildAppLink, buildInviteText, buildWebLink, parseInviteUrl } from './invite';
+import { APP_SCHEME, INVITE_WEB_BASE, buildAppLink, buildInviteText, buildWebLink, inviteRoute, parseInviteUrl } from './invite';
 
 const houseId = '0b7a6c7e-3f7e-4f6e-9a55-1c2d3e4f5a6b';
 const secret = 'Ab_-0123456789abcdefghijklmnopqrstuvwxyzABC'; // 43 chars
@@ -50,6 +50,20 @@ describe('invite links', () => {
     `http://stevenkhaw.github.io/Chips/join/#h=${houseId}&s=${secret}`,
   ])('ignores non-invite url %s', (url) => {
     expect(parseInviteUrl(url)).toBeNull();
+  });
+});
+
+describe('inviteRoute', () => {
+  it('sends invites to the prefilled join screen', () => {
+    expect(inviteRoute(buildWebLink(inv))).toBe(`/houses/join?h=${houseId}&s=${secret}`);
+    expect(inviteRoute(buildAppLink(inv))).toBe(`/houses/join?h=${houseId}&s=${secret}`);
+  });
+  it('flags a broken invite', () => {
+    expect(inviteRoute('chips://join?h=nope')).toBe('/houses/join?bad=1');
+  });
+  it('passes everything else through', () => {
+    expect(inviteRoute('chips://session/abc')).toBe('chips://session/abc');
+    expect(inviteRoute('/houses/new')).toBe('/houses/new');
   });
 });
 

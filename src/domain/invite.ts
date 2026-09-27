@@ -69,6 +69,17 @@ function fromParams(raw: string): ParsedInvite {
   return { kind: 'invite', invite: { houseId: h.toLowerCase(), secret: s } };
 }
 
+/**
+ * Where an incoming system URL should go (`app/+native-intent.tsx`): invite links to the prefilled
+ * join screen, broken ones to the join screen with a warning, anything else unchanged.
+ */
+export function inviteRoute(url: string): string {
+  const p = parseInviteUrl(url);
+  if (p?.kind === 'invite') return `/houses/join?h=${p.invite.houseId}&s=${p.invite.secret}`;
+  if (p?.kind === 'bad') return '/houses/join?bad=1';
+  return url;
+}
+
 /** The message behind Share invite / Copy invite text (spec §2.5). */
 export function buildInviteText(a: {
   houseName: string;
