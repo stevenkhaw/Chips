@@ -14,9 +14,10 @@ import {
 import { openExpoDb } from '@/db/expo-adapter';
 import { migrate } from '@/db/schema';
 import { setDb } from '@/db/connection';
-import { reloadAll } from '@/store/houseActions';
+import { reloadAll, setOnHouseDeleted } from '@/store/houseActions';
 import { startSync } from '@/store/syncActions';
 import { createAppSyncClient } from '@/sync/client';
+import { forgetHouseSecrets } from '@/sync/passwords';
 import { setSyncClient } from '@/sync/registry';
 import { colors, textStyles } from '@/theme';
 
@@ -58,6 +59,7 @@ export default function RootLayout() {
       const db = openExpoDb();
       migrate(db);
       setDb(db);
+      setOnHouseDeleted((id) => void forgetHouseSecrets(id));
       reloadAll();
       setReady(true);
     } catch (e) {

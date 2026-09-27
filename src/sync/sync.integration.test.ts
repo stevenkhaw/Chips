@@ -18,7 +18,7 @@ import { pushHouse } from './push';
 import * as remote from './remote';
 import { fetchHouse, fetchPage, rpcLeaveHouse, rpcRemoveMember, upsertRows, PAGE_SIZE } from './remote';
 import { overlapStart } from './cursor';
-import { joinByCode } from './join';
+import { joinByCode, joinByLink } from './join';
 import { pullHouse } from './pull';
 import * as pull from './pull';
 
@@ -191,6 +191,52 @@ describeIt('sync against local Supabase', () => {
     expect(getHouse(readerDb, house.id)).toEqual(
       expect.objectContaining({ name: 'IT Crew', currencySymbol: '£', role: 'reader', published: true, joinCode }),
     );
+  });
+
+  it('a reader joins by link and gets the same ledger', async () => {
+    const ownerDb = createTestDb();
+    const owner = newClient();
+    const { house } = seedHouse(ownerDb);
+    const { inviteSecret } = await publishAndPush(ownerDb, owner, house.id, 'hunter22');
+    expect(await remote.fetchInviteSecret(owner, house.id)).toBe(inviteSecret);
+
+    const readerDb = createTestDb();
+    const reader = newClient();
+    const invite = { houseId: house.id, secret: inviteSecret };
+    expect(await joinByLink(readerDb, reader, invite, 'Rae')).toEqual({ ok: true, houseId: house.id, role: 'reader', added: true });
+    expect(snapshot(readerDb, house.id)).toEqual(snapshot(ownerDb, house.id));
+    expect(await remote.fetchInviteSecret(reader, house.id)).toBeNull(); // RLS: owner only
+    expect(await joinByLink(readerDb, reader, invite)).toEqual({ ok: true, houseId: house.id, role: 'reader', added: false });
+    // The owner tapping their own link keeps owner role and adds nothing.
+    expect(await joinByLink(ownerDb, owner, invite)).toEqual({ ok: true, houseId: house.id, role: 'owner', added: false });
+  });
+
+  it('reset link and remove member invalidate the old link', async () => {
+    const ownerDb = createTestDb();
+    const owner = newClient();
+    const { house } = seedHouse(ownerDb);
+    const { inviteSecret: first } = await publishAndPush(ownerDb, owner, house.id, 'hunter22');
+    const second = await remote.rpcResetInviteLink(owner, house.id);
+    expect(second).not.toBe(first);
+    expect(await joinByLink(createTestDb(), newClient(), { houseId: house.id, secret: first })).toEqual({ ok: false, error: 'invalid' });
+
+    const readerDb = createTestDb();
+    const reader = newClient();
+    expect(await joinByLink(readerDb, reader, { houseId: house.id, secret: second })).toMatchObject({ ok: true });
+    const readerId = await remote.currentUserId(reader);
+    const third = await rpcRemoveMember(owner, house.id, readerId);
+    expect(await remote.fetchInviteSecret(owner, house.id)).toBe(third);
+    expect(await joinByLink(createTestDb(), newClient(), { houseId: house.id, secret: second })).toEqual({ ok: false, error: 'invalid' });
+  });
+
+  it('a link to a deleted house is invalid', async () => {
+    const ownerDb = createTestDb();
+    const owner = newClient();
+    const { house } = seedHouse(ownerDb);
+    const { inviteSecret } = await publishAndPush(ownerDb, owner, house.id, 'hunter22');
+    deleteHouse(ownerDb, house.id); // owner db still has My House, so deleting is allowed
+    await pushHouse(ownerDb, owner, house.id);
+    expect(await joinByLink(createTestDb(), newClient(), { houseId: house.id, secret: inviteSecret })).toEqual({ ok: false, error: 'invalid' });
   });
 
   it('wrong code and wrong password give the same answer', async () => {

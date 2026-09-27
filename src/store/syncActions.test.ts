@@ -5,6 +5,9 @@ jest.mock('@/sync/remote', () => ({
   ensureSession: jest.fn(),
   rpcCreateHouse: jest.fn(),
   rpcLeaveHouse: jest.fn(),
+  rpcRemoveMember: jest.fn(),
+  rpcResetInviteLink: jest.fn(),
+  fetchInviteSecret: jest.fn(),
   currentUserId: jest.fn(),
 }));
 
@@ -18,9 +21,16 @@ import { setSyncClient } from '@/sync/registry';
 import { pushHouse } from '@/sync/push';
 import { pullHouse } from '@/sync/pull';
 import { reloadAll } from './houseActions';
-import { currentUserId, ensureSession, rpcCreateHouse, rpcLeaveHouse } from '@/sync/remote';
-import { loadPassword } from '@/sync/passwords';
-import { PUSH_DEBOUNCE_MS, leaveHouse, loadMembers, pushDirtyHouses, schedulePush, shareHouse, syncHouse, startSync } from './syncActions';
+import {
+  currentUserId, ensureSession, fetchInviteSecret, rpcCreateHouse, rpcLeaveHouse, rpcRemoveMember, rpcResetInviteLink,
+} from '@/sync/remote';
+import { loadInviteSecret, loadPassword, saveInviteSecret, savePassword } from '@/sync/passwords';
+import {
+  PUSH_DEBOUNCE_MS, leaveHouse, loadInvite, loadMembers, pushDirtyHouses, removeHouseMember, resetInviteLink, schedulePush, shareHouse,
+  syncHouse, startSync,
+} from './syncActions';
+import { deleteHouse as deleteHouseAction, setOnHouseDeleted } from './houseActions';
+import { forgetHouseSecrets } from '@/sync/passwords';
 import { useSessionsStore } from './useSessionsStore';
 import { useSyncStore } from './useSyncStore';
 import { getDb } from '@/db/connection';
@@ -31,6 +41,9 @@ const session = ensureSession as jest.Mock;
 const createRpc = rpcCreateHouse as jest.Mock;
 const leaveRpc = rpcLeaveHouse as jest.Mock;
 const getUserId = currentUserId as jest.Mock;
+const fetchSecret = fetchInviteSecret as jest.Mock;
+const removeRpc = rpcRemoveMember as jest.Mock;
+const resetLinkRpc = rpcResetInviteLink as jest.Mock;
 
 describe('syncActions', () => {
   let houseId: string;
@@ -49,6 +62,9 @@ describe('syncActions', () => {
     createRpc.mockReset();
     leaveRpc.mockReset();
     getUserId.mockReset();
+    fetchSecret.mockReset();
+    removeRpc.mockReset();
+    resetLinkRpc.mockReset();
     getUserId.mockResolvedValue('user-1');
     useSyncStore.setState({ byHouse: {}, pending: {} });
   });
@@ -211,6 +227,7 @@ describe('syncActions', () => {
 
     await expect(shareHouse(house.id, 'hunter22')).resolves.toEqual({ joinCode: 'K7QXM2PA' });
     expect(await loadPassword(house.id)).toBe('hunter22');
+    expect(await loadInviteSecret(house.id)).toBe('s'.repeat(43));
     expect(getHouse(db, house.id)).toEqual(expect.objectContaining({ published: true, joinCode: 'K7QXM2PA' }));
 
     // The push runs in the background and its failure lands in the status line.
@@ -306,5 +323,62 @@ describe('syncActions', () => {
     expect(pull).not.toHaveBeenCalled();
     expect(getHouse(db, server.id)).not.toBeNull(); // not purged
     expect(useSyncStore.getState().byHouse[server.id]).toEqual({ phase: 'offline', message: "You're offline" });
+  });
+
+  describe('invite secret', () => {
+    const secret = (c: string) => c.repeat(43);
+
+    it('loadInvite reads the server secret and caches it', async () => {
+      await savePassword(houseId, 'pw1234');
+      fetchSecret.mockResolvedValue(secret('a'));
+      await expect(loadInvite(houseId)).resolves.toEqual({ invite: { houseId, secret: secret('a') }, password: 'pw1234' });
+      expect(await loadInviteSecret(houseId)).toBe(secret('a'));
+    });
+
+    it('loadInvite falls back to the cached secret offline', async () => {
+      await saveInviteSecret(houseId, secret('b'));
+      fetchSecret.mockRejectedValue(new TypeError('Network request failed'));
+      await expect(loadInvite(houseId)).resolves.toEqual({ invite: { houseId, secret: secret('b') }, password: null });
+    });
+
+    it('loadInvite has no invite offline without a cache, and rethrows other errors', async () => {
+      await forgetHouseSecrets(houseId);
+      fetchSecret.mockRejectedValue(new TypeError('Network request failed'));
+      await expect(loadInvite(houseId)).resolves.toEqual({ invite: null, password: null });
+      fetchSecret.mockRejectedValue(Object.assign(new Error('forbidden'), { code: 'P0001' }));
+      await expect(loadInvite(houseId)).rejects.toMatchObject({ message: 'forbidden' });
+    });
+
+    it('reset link and remove member cache the new secret', async () => {
+      resetLinkRpc.mockResolvedValue(secret('c'));
+      await expect(resetInviteLink(houseId)).resolves.toEqual({ houseId, secret: secret('c') });
+      expect(await loadInviteSecret(houseId)).toBe(secret('c'));
+      removeRpc.mockResolvedValue(secret('d'));
+      await removeHouseMember(houseId, 'user-2');
+      expect(await loadInviteSecret(houseId)).toBe(secret('d'));
+    });
+
+    it('leaving a house forgets its password and secret', async () => {
+      const db = getDb();
+      const server: ServerHouse = {
+        id: 'reader-house-9', name: 'Bye', currency_symbol: '$', join_code: 'BYEBYEHH', created_at: 1, updated_at: 1, deleted_at: null,
+      };
+      insertJoinedHouse(db, server, 'reader');
+      await savePassword(server.id, 'pw1234');
+      await saveInviteSecret(server.id, secret('e'));
+      leaveRpc.mockResolvedValue(undefined);
+      await leaveHouse(server.id);
+      expect(await loadPassword(server.id)).toBeNull();
+      expect(await loadInviteSecret(server.id)).toBeNull();
+    });
+
+    it('deleting a house runs the delete hook', () => {
+      const hook = jest.fn();
+      setOnHouseDeleted(hook);
+      const other = createHouse(getDb(), { name: 'Gone', currencySymbol: '$' });
+      deleteHouseAction(other.id);
+      expect(hook).toHaveBeenCalledWith(other.id);
+      setOnHouseDeleted(null);
+    });
   });
 });
