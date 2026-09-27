@@ -1,24 +1,34 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Alert, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
+import { Alert, Share, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Banner, Body, Button, Caption, Divider, NavHeader, Overline, Pill, Row, Screen, toastError } from '@/components/ui';
 import { useHousesStore } from '@/store/useHousesStore';
 import { deleteHouse, renameHouse, setHouseCurrency } from '@/store/houseActions';
 import {
-  leaveHouse, loadMembers, removeClosedHouse, removeHouseMember, resetHousePassword, shareHouse, syncHouse,
+  leaveHouse, loadInvite, loadMembers, removeClosedHouse, removeHouseMember, resetHousePassword, resetInviteLink, shareHouse,
+  syncHouse,
 } from '@/store/syncActions';
 import { getSyncClient } from '@/sync/registry';
-import { loadPassword } from '@/sync/passwords';
 import { describeSyncError } from '@/sync/errors';
 import type { Member } from '@/sync/remote';
 import type { House } from '@/domain/types';
 import { formatJoinCode } from '@/domain/joinCode';
+import { buildInviteText, type Invite } from '@/domain/invite';
 import { copyToClipboard } from '@/share';
 import { formatDate } from '@/date';
 import { colors, radius, space, textStyles } from '@/theme';
 
 const MIN_PASSWORD = 4;
 const fail = (e: unknown) => toastError(new Error(describeSyncError(e).message));
+
+/** Native share sheet with the invite text; a dismissed sheet is not an error. */
+async function shareInvite(message: string): Promise<void> {
+  try {
+    await Share.share({ message });
+  } catch (e) {
+    toastError(e);
+  }
+}
 
 export default function HouseSettingsScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -138,7 +148,17 @@ function ShareSection({ house }: { house: House }) {
     setBusy(true);
     try {
       const { joinCode } = await shareHouse(house.id, password);
-      Alert.alert('Shared', `Join code ${formatJoinCode(joinCode)}. Friends need the code and your password.`);
+      const sent = password;
+      Alert.alert('Shared', `Join code ${formatJoinCode(joinCode)}. Send friends an invite so they can join.`, [
+        { text: 'Later', style: 'cancel' },
+        {
+          text: 'Share invite',
+          onPress: () =>
+            void loadInvite(house.id)
+              .catch(() => ({ invite: null }))
+              .then(({ invite }) => shareInvite(buildInviteText({ houseName: house.name, joinCode, password: sent, invite }))),
+        },
+      ]);
     } catch (e) {
       fail(e);
     } finally {
@@ -181,15 +201,52 @@ function ShareSection({ house }: { house: House }) {
 /** Owner, published: code, password, members, sync now. */
 function SharingSection({ house }: { house: House }) {
   const [saved, setSaved] = useState<string | null>(null);
+  const [invite, setInvite] = useState<Invite | null>(null);
+  const [inviteLoaded, setInviteLoaded] = useState(false);
+  const [resettingLink, setResettingLink] = useState(false);
   const [shown, setShown] = useState(false);
   const [newPassword, setNewPassword] = useState('');
   const [resetting, setResetting] = useState(false);
   const [members, setMembers] = useState<{ me: string; members: Member[] } | null>(null);
   const [membersError, setMembersError] = useState(false);
 
-  useEffect(() => {
-    void loadPassword(house.id).then(setSaved);
+  // A load failure (signed out, server error) leaves the invite as code-only; the members panel
+  // below already reports the same failure, so this stays quiet.
+  const reloadInvite = useCallback(() => {
+    loadInvite(house.id).then(
+      (r) => {
+        setInvite(r.invite);
+        setSaved(r.password);
+        setInviteLoaded(true);
+      },
+      () => {
+        setInvite(null);
+        setInviteLoaded(true);
+      },
+    );
   }, [house.id]);
+  useEffect(reloadInvite, [reloadInvite]);
+
+  const inviteText = () => buildInviteText({ houseName: house.name, joinCode: house.joinCode, password: saved, invite });
+
+  const confirmResetLink = () =>
+    Alert.alert('Reset invite link?', 'Old invite links stop working. Current members stay.', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Reset link',
+        style: 'destructive',
+        onPress: async () => {
+          setResettingLink(true);
+          try {
+            setInvite(await resetInviteLink(house.id));
+          } catch (e) {
+            fail(e);
+          } finally {
+            setResettingLink(false);
+          }
+        },
+      },
+    ]);
 
   const reloadMembers = useCallback(() => {
     setMembersError(false);
@@ -224,19 +281,45 @@ function SharingSection({ house }: { house: House }) {
   };
 
   const confirmRemove = (m: Member) =>
-    Alert.alert(`Remove ${m.display_name ?? 'this member'}?`, 'They lose access now. To keep them out, also reset the password.', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Remove',
-        style: 'destructive',
-        onPress: () => removeHouseMember(house.id, m.user_id).then(reloadMembers, fail),
-      },
-    ]);
+    Alert.alert(
+      `Remove ${m.display_name ?? 'this member'}?`,
+      'They lose access now and old invite links stop working. To keep them out, also reset the password.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Remove',
+          style: 'destructive',
+          onPress: () =>
+            removeHouseMember(house.id, m.user_id).then(() => {
+              reloadMembers();
+              reloadInvite();
+            }, fail),
+        },
+      ],
+    );
 
   return (
     <>
       <Overline style={s.section}>Sharing</Overline>
-      <Caption>Join code</Caption>
+      <Button label="Share invite" size="md" onPress={() => void shareInvite(inviteText())} disabled={!inviteLoaded} />
+      <Button
+        label="Copy invite text"
+        variant="secondary"
+        size="md"
+        onPress={() => void copy(inviteText(), 'Invite')}
+        disabled={!inviteLoaded}
+        style={{ marginTop: space.sm }}
+      />
+      <Caption tone="muted" style={{ marginTop: space.sm }}>
+        Anyone with this invite can join as a viewer. Reset the link or password to stop new joins; current members stay.
+      </Caption>
+      {inviteLoaded && !invite ? (
+        <Caption tone="muted" style={{ marginTop: space.xs }}>
+          Link unavailable offline — the invite has the code only.
+        </Caption>
+      ) : null}
+
+      <Caption style={{ marginTop: space.lg }}>Join code</Caption>
       <Row style={{ marginTop: space.xs }}>
         <Text style={s.code}>{house.joinCode ? formatJoinCode(house.joinCode) : '—'}</Text>
         <View style={{ flex: 1 }} />
@@ -274,6 +357,14 @@ function SharingSection({ house }: { house: House }) {
         size="md"
         onPress={() => void reset()}
         disabled={resetting || newPassword.length < MIN_PASSWORD}
+        style={{ marginTop: space.sm }}
+      />
+      <Button
+        label={resettingLink ? 'Resetting…' : 'Reset invite link'}
+        variant="secondary"
+        size="md"
+        onPress={confirmResetLink}
+        disabled={resettingLink}
         style={{ marginTop: space.sm }}
       />
 
