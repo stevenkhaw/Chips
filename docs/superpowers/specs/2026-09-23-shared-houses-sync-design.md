@@ -117,10 +117,13 @@ Two link forms, both carrying house id and invite secret:
 
 - `https://<GitHub Pages site>/join#h=<house_id>&s=<invite_secret>`. The secret
   sits in the fragment, which browsers never send to a server. Add
-  `docs/.well-known/apple-app-site-association` and
-  `docs/.well-known/assetlinks.json` so the link opens the app directly
-  (universal links / Android app links; `docs/.nojekyll` already exists, which
-  Pages needs to serve dot-folders). `docs/join/index.html` is the fallback
+  `.well-known/apple-app-site-association` and `.well-known/assetlinks.json`
+  so the link opens the app directly (universal links / Android app links).
+  *Amended 2026-09-27:* both OSes only read `/.well-known/` at the domain
+  root, and this repo's Pages site lives under `/Chips/`. The files are
+  therefore hosted from a separate user-site repo
+  (`stevenkhaw/stevenkhaw.github.io`), with canonical copies in
+  `deploy/user-site/`. See Decision 1 of the phase 4 plan. `docs/join/index.html` is the fallback
   when the app is missing: TestFlight and Android install buttons, plus
   instructions to tap the link again after installing.
 - `chips://join?h=<house_id>&s=<invite_secret>`. The `chips` scheme is already
@@ -262,11 +265,14 @@ redesign.
 
 Each phase ships on its own.
 
-0. Merge `feat/player-stats` (pending device check).
+Status 2026-09-27: phases 0–3 are on `main`; phase 4 is planned
+(`plans/2026-09-27-shared-houses-phase4-links.md`).
+
+0. Merge `feat/player-stats` (pending device check). *Done.*
 1. Local houses: migration v3, house switcher, `/houses/new`, `useCanEdit()`.
-   No network.
-2. Supabase schema, RLS, RPCs, pgTAP tests.
-3. Share house (publish + push), join by code, pull, sync status.
+   No network. *Done.*
+2. Supabase schema, RLS, RPCs, pgTAP tests. *Done.*
+3. Share house (publish + push), join by code, pull, sync status. *Done.*
 4. Links (`chips://`, https, `.well-known` files, join page), invite text.
 5. Account linking, account deletion, privacy policy.
 6. Android build, TestFlight public link.

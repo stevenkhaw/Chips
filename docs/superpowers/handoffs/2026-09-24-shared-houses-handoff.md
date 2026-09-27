@@ -1,5 +1,7 @@
 # Handoff: Chips shared houses (after phase 2, before phase 3)
 
+> **Superseded** by `2026-09-27-shared-houses-handoff.md` (phase 3 is done). Kept for the phase 1 orientation notes and the "Phase 3 must know" server contract.
+
 Date: 2026-09-24. Repo: `stevenkhaw/Chips`, branch `main` @ `5747fac`, pushed.
 
 ## Goal
