@@ -42,7 +42,7 @@
   - Secret format: 43 characters of `[A-Za-z0-9_-]` (32 bytes, url-safe base64, no padding). House id: lowercase uuid.
 - **Commits.**
   - Every commit message ends with the trailer `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`.
-  - Work on branch `feat/shared-houses-phase4`.
+  - Work on the branch assigned for this cycle. In the 2026-09-27 session that is `claude/gallant-turing-0x6lg4` ([PR #1](https://github.com/stevenkhaw/Chips/pull/1)), after phase 4a.
   - Do not merge or push without Steven's go-ahead.
 
 ## Decisions made for this plan
@@ -122,10 +122,10 @@ export function buildInviteText(a: {
 }): string;
 ```
 
-- [ ] **Step 1: Branch**
+- [ ] **Step 1: Branch check**
 
 ```bash
-git checkout -b feat/shared-houses-phase4
+git status   # on the assigned branch, clean, phase 4a committed
 ```
 
 - [ ] **Step 2: Write the failing tests** in `src/domain/invite.test.ts`

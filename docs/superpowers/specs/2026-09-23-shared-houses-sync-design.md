@@ -14,14 +14,16 @@ the only writer; everyone else reads.
 |---|---|
 | Platforms | iOS and Android from the one Expo codebase |
 | Grouping | A **house** holds players and nights. A user can own some houses and read others. |
-| Permissions | One writer per house (the owner). Members are read-only. Enforced on the server. |
+| Permissions | The owner, plus any members the owner promotes to **editor**, can write; other members read. Only the owner manages the house itself (name, currency, members, secrets, delete). Enforced on the server. *Amended 2026-09-27: editors added (phase 4b); v1 shipped owner-only.* |
+| Change log | The server records every change to the ledger, membership and house (who, when, before/after) in an append-only log. The owner can read it. *Added 2026-09-27 (phase 4a).* |
 | Identity | Invisible anonymous Supabase account, created lazily on first share or join. Owner can link Sign in with Apple / Google so ownership survives a new phone. |
 | Joining | Code + password, https invite link, `chips://` invite link, and a "Copy invite text" button. |
 | Freshness | Readers pull on open, on house switch and on pull-to-refresh. Realtime is a later add-on. |
 | Offline | Owner keeps writing to local SQLite; changes push when online. Readers read from a local cache. |
 | Backend | Supabase (Postgres, auth, row-level security). Firebase and a hand-rolled Cloudflare D1 API were rejected: document model fits the relational ledger poorly / too much hand-rolled auth. |
 
-Out of scope for v1: realtime, ownership transfer, co-owners, CAPTCHA on
+Out of scope for v1: realtime, ownership transfer, a second owner (editors
+cover shared writing), CAPTCHA on
 anonymous sign-in (add only if abuse appears), linking a reader to "their"
 player.
 
@@ -190,9 +192,13 @@ Reader: **Leave house** removes the membership and the local copy.
 
 ### 3.3 Conflicts
 
-One writer per house means no merging. Readers never attempt writes, and RLS
-rejects them if one slips through. If the owner edits on two phones at once,
-the last push wins. Accepted.
+No merging. Readers never attempt writes, and RLS rejects them if one slips
+through. When several writers exist (the owner on two phones, or editors from
+phase 4b), conflicts resolve per row: the last push wins. A pull never
+overwrites a local row that is still waiting to push, so the local edit pushes
+next and wins. Rows are small (one buy-in, one player's cash-out), so a real
+clash needs two people editing the same row at once. The change log (§8)
+records both versions. Accepted.
 
 ### 3.4 Status
 
@@ -265,15 +271,18 @@ redesign.
 
 Each phase ships on its own.
 
-Status 2026-09-27: phases 0–3 are on `main`; phase 4 is planned
-(`plans/2026-09-27-shared-houses-phase4-links.md`).
+Status 2026-09-27: phases 0–3 are on `main`. Phases 4a, 4 and 4b are planned
+in `plans/2026-09-27-shared-houses-phase4*.md`, in that order.
 
 0. Merge `feat/player-stats` (pending device check). *Done.*
 1. Local houses: migration v3, house switcher, `/houses/new`, `useCanEdit()`.
    No network. *Done.*
 2. Supabase schema, RLS, RPCs, pgTAP tests. *Done.*
 3. Share house (publish + push), join by code, pull, sync status. *Done.*
+4a. Change log (§8): server table, triggers, pgTAP. Server only.
 4. Links (`chips://`, https, `.well-known` files, join page), invite text.
+4b. Editors: `editor` role, owner promotes and demotes members, multi-writer
+   push and pull, a Changes screen that reads the change log.
 5. Account linking, account deletion, privacy policy.
 6. Android build, TestFlight public link.
 
@@ -320,3 +329,32 @@ removes a member.
 | Removed from house | Next pull shows "You no longer have access" and removes the local copy |
 | House deleted | Readers see "House closed" and can remove it |
 | Supabase paused or down | Same as offline; app works from cache |
+
+## 8. Change log (added 2026-09-27)
+
+Goal: the owner can see who changed what and when, for every change that
+reaches the server.
+
+- **Where.** On the server, recorded by triggers, so it covers every app
+  version, push retries and editors. The phone keeps no log of its own.
+- **What.**
+  - Inserts and updates on the five ledger tables and `houses`.
+  - Inserts, updates and deletes on `house_members` (join, leave, remove, role
+    change).
+  - Updates on `house_secrets` (password or link reset), with the values
+    redacted.
+- **Row shape.** `house_id`, `table_name`, `row_id`, `op`, `actor_id`
+  (`auth.uid()`, null for admin writes), `at`, `before` / `after` jsonb.
+  - An update stores only the columns that changed.
+  - An insert stores the full row in `after`.
+  - Bookkeeping columns (`server_updated_at`, `updated_at`) never count as a
+    change. So a push retry that re-sends an identical row logs nothing.
+  - A soft delete is an update whose diff sets `deleted_at`.
+- **Access.** Append-only. Only the triggers write to it, and nobody can
+  update or delete through the API. That includes `service_role`, apart from
+  the table owner. The house owner can select it; editors can too from
+  phase 4b.
+- **Retention.** Keep everything. A poker ledger is tiny next to the free
+  tier's 500 MB. Revisit only if a house grows past about 100k entries.
+- **UI.** Phase 4b adds a read-only Changes screen, e.g. "Ann's buy-in $20 →
+  $25 · Steven · 9:41 pm". Names come from `house_members.display_name`.
