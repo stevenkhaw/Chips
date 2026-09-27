@@ -104,11 +104,21 @@ type check and Expo bundle export. The Device checklist above and the two-phone 
 not been recorded as run. That includes the Android-specific checks: the platform date dialog, bottom
 sheets above the navigation bar, and Manrope loading.
 
-Shared houses (spec §5.4): phases 0–3 are on `main`. That covers local houses, the Supabase
-schema, share, join by code, push/pull and the sync status. Phase 4 (invite links, invite text) is
-planned in `docs/superpowers/plans/2026-09-27-shared-houses-phase4-links.md`. Phase 5 (account
-linking, deletion, privacy) and phase 6 (public TestFlight link, APK distribution) come next.
-Realtime and the leaderboard are deferred.
+Shared houses (spec §5.4): phases 0–3 cover local houses, the Supabase schema, share, join by code,
+push/pull and the sync status. Also built:
+- phase 4a, a server change log;
+- phase 4, invite links and invite text.
+
+Phase 4 still needs its device check. Phase 4b (editors) is planned. Phase 5 (account linking,
+deletion, privacy) and phase 6 (public TestFlight link, APK distribution) follow. Realtime and the
+leaderboard are deferred. The newest file in `docs/superpowers/handoffs/` has the details.
+
+## Invite links
+
+Links look like `https://stevenkhaw.github.io/Chips/join/#h=<house>&s=<secret>` (plus a `chips://join?…`
+backup). For them to open the app, iOS and Android read `/.well-known/` files from the root of
+`stevenkhaw.github.io`, served from the separate `stevenkhaw/stevenkhaw.github.io` repo. Canonical
+copies and check commands are in `deploy/user-site/`. People without the app land on `docs/join/`.
 
 ## Server (Supabase)
 
