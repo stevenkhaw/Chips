@@ -1,6 +1,7 @@
 # Chips
 
 Poker-night balance tracker. Log buy-ins and cash-outs per player, get the fewest transfers to settle, share a settlement card.
+Share a house so friends see the same ledger read-only (Supabase sync).
 
 ## Run
 
@@ -9,7 +10,7 @@ Poker-night balance tracker. Log buy-ins and cash-outs per player, get the fewes
 
 ## Test
 
-    npm test              # Jest: domain math, repositories, stores
+    npm test              # Jest: domain math, repositories, stores, sync actions
     npx tsc --noEmit
 
 ## Layout
@@ -17,12 +18,15 @@ Poker-night balance tracker. Log buy-ins and cash-outs per player, get the fewes
 - `src/domain` pure math (nets, minimal-transfer settlement, money, chips)
 - `src/db` SQLite schema, migrations, adapters (expo-sqlite on device, node:sqlite in tests)
 - `src/repo` SQL-backed CRUD
-- `src/store` Zustand stores
+- `src/store` Zustand stores; `syncActions.ts` wires sync into the app
+- `src/sync` network side: Supabase calls, push, pull, publish, join, error messages
 - `src/app` Expo Router screens
 - `src/components` UI
 
 Design spec: `docs/superpowers/specs/2026-09-16-poker-balance-tracker-design.md`
 Plan: `docs/superpowers/plans/2026-09-16-poker-balance-tracker.md`
+Shared houses: spec `docs/superpowers/specs/2026-09-23-shared-houses-sync-design.md`, phase plans in
+`docs/superpowers/plans/`, current state in the newest `docs/superpowers/handoffs/` file.
 Design system: `docs/design/stitch/felt_ledger/DESIGN.md` (screens: `docs/design/stitch/`)
 
 ## Build for a phone
@@ -95,15 +99,26 @@ first so the on-device database starts fresh.
 
 ## Status
 
-Verified by unit tests, type check and Expo bundle export. Not yet run on a device or simulator —
-see Device checklist.
+Verified by unit tests (199 pass; the 17-test sync integration suite runs with `npm run test:sync`),
+type check and Expo bundle export. The Device checklist above and the two-phone sync check have
+not been recorded as run. That includes the Android-specific checks: the platform date dialog, bottom
+sheets above the navigation bar, and Manrope loading.
 
-No Android emulator or device was available in this environment either, so the Android-specific
-checks (platform date dialog instead of the iOS sheet, bottom sheets sitting above the navigation
-bar, Manrope loading) have not been run. They are covered by the same Device checklist once an
-Android device with Expo Go is available.
+Shared houses (spec §5.4): phases 0–3 cover local houses, the Supabase schema, share, join by code,
+push/pull and the sync status. Also built:
+- phase 4a, a server change log;
+- phase 4, invite links and invite text.
 
-v1 on-device only. Sync, leaderboard and charts deferred (see spec §11).
+Phase 4 still needs its device check. Phase 4b (editors) is planned. Phase 5 (account linking,
+deletion, privacy) and phase 6 (public TestFlight link, APK distribution) follow. Realtime and the
+leaderboard are deferred. The newest file in `docs/superpowers/handoffs/` has the details.
+
+## Invite links
+
+Links look like `https://stevenkhaw.github.io/Chips/join/#h=<house>&s=<secret>` (plus a `chips://join?…`
+backup). For them to open the app, iOS and Android read `/.well-known/` files from the root of
+`stevenkhaw.github.io`, served from the separate `stevenkhaw/stevenkhaw.github.io` repo. Canonical
+copies and check commands are in `deploy/user-site/`. People without the app land on `docs/join/`.
 
 ## Server (Supabase)
 

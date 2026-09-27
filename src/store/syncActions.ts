@@ -3,13 +3,16 @@ import { getDb } from '@/db/connection';
 import * as housesRepo from '@/repo/houses';
 import * as syncRepo from '@/repo/sync';
 import { describeSyncError } from '@/sync/errors';
-import { joinByCode, type JoinOutcome } from '@/sync/join';
-import { savePassword } from '@/sync/passwords';
+import type { Invite } from '@/domain/invite';
+import { joinByCode, joinByLink, type JoinOutcome, type LinkJoinOutcome } from '@/sync/join';
+import { forgetHouseSecrets, loadInviteSecret, loadPassword, saveInviteSecret, savePassword } from '@/sync/passwords';
 import { pullHouse } from '@/sync/pull';
 import { publishHouse } from '@/sync/publish';
 import { pushHouse } from '@/sync/push';
 import { getSyncClient, requireSyncClient } from '@/sync/registry';
-import { currentUserId, listMembers, rpcLeaveHouse, rpcRemoveMember, rpcResetPassword, type Member } from '@/sync/remote';
+import {
+  currentUserId, fetchInviteSecret, listMembers, rpcLeaveHouse, rpcRemoveMember, rpcResetInviteLink, rpcResetPassword, type Member,
+} from '@/sync/remote';
 import { reloadAll } from './houseActions';
 import { useHousesStore } from './useHousesStore';
 import { usePlayersStore } from './usePlayersStore';
@@ -79,6 +82,7 @@ async function runSync(houseId: string): Promise<void> {
       const result = await pullHouse(db, client, houseId);
       if (result === 'removed') {
         syncRepo.purgeHouse(db, houseId);
+        void forgetHouseSecrets(houseId);
         reloadAll();
         if (!leaving.has(houseId)) Alert.alert('Removed from house', `You no longer have access to "${h.name}".`);
       } else if (houseId === useHousesStore.getState().currentHouseId) {
@@ -181,8 +185,9 @@ export function startSync(): () => void {
  */
 export async function shareHouse(houseId: string, password: string): Promise<{ joinCode: string }> {
   const client = requireSyncClient();
-  const { joinCode } = await publishHouse(getDb(), client, houseId, password);
+  const { joinCode, inviteSecret } = await publishHouse(getDb(), client, houseId, password);
   await savePassword(houseId, password);
+  await saveInviteSecret(houseId, inviteSecret);
   useHousesStore.getState().load();
   refreshPending();
   void syncHouse(houseId);
@@ -192,6 +197,16 @@ export async function shareHouse(houseId: string, password: string): Promise<{ j
 export async function joinHouse(code: string, password: string, displayName: string | null): Promise<JoinOutcome> {
   const db = getDb();
   const r = await joinByCode(db, requireSyncClient(), code, password, displayName?.trim() || null);
+  if (r.ok) {
+    housesRepo.setCurrentHouse(db, r.houseId);
+    reloadAll();
+  }
+  return r;
+}
+
+export async function joinHouseByLink(invite: Invite, displayName: string | null): Promise<LinkJoinOutcome> {
+  const db = getDb();
+  const r = await joinByLink(db, requireSyncClient(), invite, displayName?.trim() || null);
   if (r.ok) {
     housesRepo.setCurrentHouse(db, r.houseId);
     reloadAll();
@@ -212,6 +227,7 @@ export async function leaveHouse(houseId: string): Promise<void> {
     await rpcLeaveHouse(client, houseId);
     await inflight.get(houseId)?.catch(() => {});
     syncRepo.purgeHouse(getDb(), houseId);
+    await forgetHouseSecrets(houseId);
     reloadAll();
   } finally {
     leaving.delete(houseId);
@@ -221,6 +237,7 @@ export async function leaveHouse(houseId: string): Promise<void> {
 export async function removeClosedHouse(houseId: string): Promise<void> {
   await inflight.get(houseId)?.catch(() => {});
   syncRepo.purgeHouse(getDb(), houseId);
+  await forgetHouseSecrets(houseId);
   reloadAll();
 }
 
@@ -237,5 +254,30 @@ export async function loadMembers(houseId: string): Promise<{ me: string; member
 
 /** The removed reader's old link stops working; they can still rejoin with the code and password until it is reset. */
 export async function removeHouseMember(houseId: string, userId: string): Promise<void> {
-  await rpcRemoveMember(requireSyncClient(), houseId, userId);
+  const secret = await rpcRemoveMember(requireSyncClient(), houseId, userId);
+  await saveInviteSecret(houseId, secret);
+}
+
+/**
+ * What the owner's invite text needs (spec §2.5). The secret comes from the server, which also
+ * covers houses shared before this phone cached it, and falls back to the cache offline.
+ */
+export async function loadInvite(houseId: string): Promise<{ invite: Invite | null; password: string | null }> {
+  const password = await loadPassword(houseId);
+  let secret: string | null;
+  try {
+    secret = await fetchInviteSecret(requireSyncClient(), houseId);
+    if (secret) await saveInviteSecret(houseId, secret);
+  } catch (e) {
+    if (describeSyncError(e).kind !== 'offline') throw e;
+    secret = await loadInviteSecret(houseId);
+  }
+  return { invite: secret ? { houseId, secret } : null, password };
+}
+
+/** Old invite links stop working; current members stay. */
+export async function resetInviteLink(houseId: string): Promise<Invite> {
+  const secret = await rpcResetInviteLink(requireSyncClient(), houseId);
+  await saveInviteSecret(houseId, secret);
+  return { houseId, secret };
 }

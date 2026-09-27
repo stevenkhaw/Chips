@@ -1,0 +1,10 @@
+{
+  "applinks": {
+    "details": [
+      {
+        "appIDs": ["W7A3PP782Z.com.stevenkhaw.chips"],
+        "components": [{ "/": "/Chips/join*", "comment": "Chips invite links; secret is in the fragment" }]
+      }
+    ]
+  }
+}

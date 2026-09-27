@@ -79,6 +79,19 @@ export async function rpcJoinHouse(
   return data as JoinResponse;
 }
 
+export async function rpcJoinHouseByLink(
+  client: SupabaseClient,
+  houseId: string,
+  secret: string,
+  displayName?: string | null,
+): Promise<JoinResponse> {
+  const { data, error, status } = await client.rpc('join_house_by_link', {
+    p_house_id: houseId, p_secret: secret, p_display_name: displayName ?? null,
+  });
+  if (error) throw withStatus(error, status);
+  return data as JoinResponse;
+}
+
 /** The house row, or null when the caller is not a member (RLS hides it). */
 export async function fetchHouse(client: SupabaseClient, id: string): Promise<ServerHouse | null> {
   const { data, error, status } = await client.from('houses').select(HOUSE_COLS).eq('id', id).maybeSingle();
@@ -155,6 +168,20 @@ export async function listMembers(client: SupabaseClient, houseId: string): Prom
 /** Returns the new invite secret (the old link stops working). */
 export async function rpcRemoveMember(client: SupabaseClient, houseId: string, userId: string): Promise<string> {
   const { data, error, status } = await client.rpc('remove_member', { p_house_id: houseId, p_user_id: userId });
+  if (error) throw withStatus(error, status);
+  return data as string;
+}
+
+/** The invite link secret. Owner only: null when RLS hides the row (a reader, or not a member). */
+export async function fetchInviteSecret(client: SupabaseClient, houseId: string): Promise<string | null> {
+  const { data, error, status } = await client.from('house_secrets').select('invite_secret').eq('house_id', houseId).maybeSingle();
+  if (error) throw withStatus(error, status);
+  return (data as { invite_secret: string } | null)?.invite_secret ?? null;
+}
+
+/** Returns the new invite secret; old links stop working, members stay. */
+export async function rpcResetInviteLink(client: SupabaseClient, houseId: string): Promise<string> {
+  const { data, error, status } = await client.rpc('reset_house_link', { p_house_id: houseId });
   if (error) throw withStatus(error, status);
   return data as string;
 }

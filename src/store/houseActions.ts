@@ -39,7 +39,15 @@ export function setHouseCurrency(id: string, symbol: string): void {
   reloadAll();
 }
 
+let onHouseDeleted: ((houseId: string) => void) | null = null;
+
+/** Lets the app clear a deleted house's saved password and invite secret (stores never import src/sync). */
+export function setOnHouseDeleted(fn: ((houseId: string) => void) | null): void {
+  onHouseDeleted = fn;
+}
+
 export function deleteHouse(id: string): void {
   repo.deleteHouse(getDb(), id);
+  onHouseDeleted?.(id);
   reloadAll();
 }
