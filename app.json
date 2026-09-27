@@ -11,7 +11,10 @@
       "bundleIdentifier": "com.stevenkhaw.chips",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
-      }
+      },
+      "associatedDomains": [
+        "applinks:stevenkhaw.github.io"
+      ]
     },
     "android": {
       "adaptiveIcon": {
@@ -20,7 +23,24 @@
         "backgroundColor": "#0D0D0E"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "com.stevenkhaw.chips"
+      "package": "com.stevenkhaw.chips",
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            {
+              "scheme": "https",
+              "host": "stevenkhaw.github.io",
+              "pathPrefix": "/Chips/join"
+            }
+          ],
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
+        }
+      ]
     },
     "plugins": [
       "expo-router",

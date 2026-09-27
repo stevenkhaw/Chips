@@ -1,0 +1,10 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.stevenkhaw.chips",
+      "sha256_cert_fingerprints": ["DB:F4:28:A6:F6:A1:50:1E:50:C3:2E:3C:17:F9:0C:52:72:03:0D:03:03:33:94:20:EF:7D:51:16:37:4C:99:D1"]
+    }
+  }
+]
