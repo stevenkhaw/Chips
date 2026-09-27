@@ -487,13 +487,13 @@ EAS turns on the Associated Domains capability for the App ID at build time. Che
     "target": {
       "namespace": "android_app",
       "package_name": "com.stevenkhaw.chips",
-      "sha256_cert_fingerprints": ["<SHA256 of the EAS Android upload/signing key>"]
+      "sha256_cert_fingerprints": ["DB:F4:28:A6:F6:A1:50:1E:50:C3:2E:3C:17:F9:0C:52:72:03:0D:03:03:33:94:20:EF:7D:51:16:37:4C:99:D1"]
     }
   }
 ]
 ```
 
-Run it from the repo root; outside it, EAS offers to create a new project. Get the fingerprint with `eas credentials -p android` → the preview/production keystore → SHA-256. If a Play Store build is added later, append Play's app-signing fingerprint.
+That is the EAS-managed Android keystore for `com.stevenkhaw.chips` (shown by `eas credentials -p android`, run from the repo root). If a Play Store build is added later, append Play's app-signing fingerprint.
 
 - [ ] **Step 4: `deploy/user-site/README.md`.** Explain:
   - These files are deployed to the `stevenkhaw/stevenkhaw.github.io` repo root, and why (Decision 1).
