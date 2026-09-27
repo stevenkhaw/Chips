@@ -37,7 +37,7 @@ privacy → 6 Android build + TestFlight public link.
 
 - **`shareHouse` discards the invite secret** that `create_house` returns. Houses shared before phase 4 have no local copy, so the owner re-reads it from `house_secrets` (RLS: owner only). The phase 4 plan covers this (Decision 5).
 - **`removeHouseMember` also drops the rotated secret** that `remove_member` returns.
-- **Hosting.** The `.well-known` files cannot live in `docs/`. The Pages site for this repo is a project site under `/Chips/`, and iOS and Android only read `https://<host>/.well-known/`. The plan puts them in a new user-site repo, `stevenkhaw/stevenkhaw.github.io` (Decision 1). Steven must create that repo and supply the Apple Team ID and the EAS Android SHA-256 fingerprint.
+- **Hosting.** The `.well-known` files cannot live in `docs/`. The Pages site for this repo is a project site under `/Chips/`, and iOS and Android only read `https://<host>/.well-known/`. The plan puts them in a new user-site repo, `stevenkhaw/stevenkhaw.github.io` (Decision 1). Apple Team ID: `W7A3PP782Z`. Still needed from Steven: the repo itself, and the EAS Android SHA-256 fingerprint (run `eas credentials -p android` from the repo root).
 - **Expo Go can't test universal links or `chips://`.** Use `exp://<lan-ip>:8081/--/join?h=…&s=…` for the join flow, and an EAS build for real links.
 - **Readers already have Leave house** in House settings; the switcher's "House settings" button leads there. The old "add Leave house" parked item is done.
 
@@ -63,5 +63,5 @@ privacy → 6 Android build + TestFlight public link.
 ## Next steps
 
 1. **Steven runs the device checks** before more features land: README Device checklist, then two-phone sync (phase 3 plan Task 8 step 3). Use a `npm run release` build or Expo Go with `.env.local`.
-2. **Phase 4:** execute `plans/2026-09-27-shared-houses-phase4-links.md`. Tasks 1–5 need no Steven input except the Team ID and fingerprint in Task 5. Task 6 needs him.
+2. **Phase 4:** execute `plans/2026-09-27-shared-houses-phase4-links.md`. Tasks 1–5 need no Steven input except the Android fingerprint in Task 5. Task 6 needs him.
 3. **Phase 5:** write the plan (account linking with Apple/Google, the account-deletion RPC, the privacy policy and App Store label). Spec §2.1 and §5.2.

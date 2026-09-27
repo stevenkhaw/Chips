@@ -468,7 +468,7 @@ EAS turns on the Associated Domains capability for the App ID at build time. Che
   "applinks": {
     "details": [
       {
-        "appIDs": ["<TEAM_ID>.com.stevenkhaw.chips"],
+        "appIDs": ["W7A3PP782Z.com.stevenkhaw.chips"],
         "components": [{ "/": "/Chips/join*", "comment": "Chips invite links; secret is in the fragment" }]
       }
     ]
@@ -476,7 +476,7 @@ EAS turns on the Associated Domains capability for the App ID at build time. Che
 }
 ```
 
-`<TEAM_ID>` is the Apple Developer Team ID (developer.apple.com → Membership, or `eas credentials -p ios`). It is not a secret. Ask Steven for it; don't guess.
+`W7A3PP782Z` is Steven's Apple Developer Team ID (developer.apple.com → Membership). It is not a secret.
 
 - [ ] **Step 3: assetlinks** (`deploy/user-site/.well-known/assetlinks.json`)
 
@@ -493,7 +493,7 @@ EAS turns on the Associated Domains capability for the App ID at build time. Che
 ]
 ```
 
-Get the fingerprint with `eas credentials -p android` → the preview/production keystore → SHA-256. If a Play Store build is added later, append Play's app-signing fingerprint.
+Run it from the repo root; outside it, EAS offers to create a new project. Get the fingerprint with `eas credentials -p android` → the preview/production keystore → SHA-256. If a Play Store build is added later, append Play's app-signing fingerprint.
 
 - [ ] **Step 4: `deploy/user-site/README.md`.** Explain:
   - These files are deployed to the `stevenkhaw/stevenkhaw.github.io` repo root, and why (Decision 1).
